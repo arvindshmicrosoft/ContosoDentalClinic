@@ -1,0 +1,196 @@
+@model IEnumerable<DentalClinicWebApp.Models.PatientRecord>
+
+@{
+    ViewData["Title"] = "Patient Medical Records";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-file-medical-alt text-primary me-2"></i>
+                    Patient Medical Records
+                </h2>
+                @if (User.IsInRole("Doctor") || User.IsInRole("DentalHygienist") || User.IsInRole("Administrator"))
+                {
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add New Record
+                    </a>
+                }
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="searchString" class="form-label">Search Records</label>
+                            <input type="text" class="form-control" id="searchString" name="searchString" 
+                                   value="@ViewBag.SearchString" placeholder="Search by patient name, email, or medical history...">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="patientId" class="form-label">Filter by Patient</label>
+                            <select class="form-select" id="patientId" name="patientId">
+                                <option value="">All Patients</option>
+                                @{
+                                    var allPatients = ViewBag.Patients as IEnumerable<DentalClinicWebApp.Models.ApplicationUser>;
+                                    if (allPatients != null)
+                                    {
+                                        foreach (var patient in allPatients)
+                                        {
+                                            if (ViewBag.PatientId?.ToString() == patient.Id)
+                                            {
+                                                <option value="@patient.Id" selected>
+                                                    @patient.FirstName @patient.LastName
+                                                </option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@patient.Id">
+                                                    @patient.FirstName @patient.LastName
+                                                </option>
+                                            }
+                                        }
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-search me-1"></i>Search
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Records Table -->
+            @if (Model.Any())
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Patient</th>
+                                        <th>Doctor</th>
+                                        <th>Summary</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var record in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@record.RecordDate.ToString("MM/dd/yyyy")</strong>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <strong>@record.Patient.FirstName @record.Patient.LastName</strong>
+                                                </div>
+                                                <small class="text-muted">@record.Patient.Email</small>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <strong>@record.Doctor.FirstName @record.Doctor.LastName</strong>
+                                                </div>
+                                                <small class="text-muted">@record.Doctor.Email</small>
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(record.Notes))
+                                                {
+                                                    var summaryNotes = record.Notes.Length > 100 ? record.Notes.Substring(0, 100) + "..." : record.Notes;
+                                                    <span title="@record.Notes">@summaryNotes</span>
+                                                }
+                                                else if (!string.IsNullOrEmpty(record.MedicalHistory))
+                                                {
+                                                    var summaryHistory = record.MedicalHistory.Length > 100 ? record.MedicalHistory.Substring(0, 100) + "..." : record.MedicalHistory;
+                                                    <span title="@record.MedicalHistory">@summaryHistory</span>
+                                                }
+                                                else
+                                                {
+                                                    <em class="text-muted">No summary available</em>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (record.IsActive)
+                                                {
+                                                    <span class="badge bg-success">Active</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a asp-action="Details" asp-route-id="@record.Id" 
+                                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a asp-action="PatientHistory" asp-route-patientId="@record.PatientId" 
+                                                       class="btn btn-sm btn-outline-info" title="Patient History">
+                                                        <i class="fas fa-history"></i>
+                                                    </a>
+                                                    @if (User.IsInRole("Administrator") || ViewBag.CurrentUserId == record.DoctorId)
+                                                    {
+                                                        <a asp-action="Edit" asp-route-id="@record.Id" 
+                                                           class="btn btn-sm btn-outline-success" title="Edit">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-file-medical-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Medical Records Found</h5>
+                        <p class="text-muted">
+                            @if (!string.IsNullOrEmpty(ViewBag.SearchString))
+                            {
+                                <span>No records match your search criteria.</span>
+                            }
+                            else
+                            {
+                                <span>There are no medical records in the system yet.</span>
+                            }
+                        </p>
+                        @if (User.IsInRole("Doctor") || User.IsInRole("DentalHygienist") || User.IsInRole("Administrator"))
+                        {
+                            <a asp-action="Create" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Create First Record
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-submit form when patient filter changes
+        document.getElementById('patientId').addEventListener('change', function() {
+            this.form.submit();
+        });
+    </script>
+}

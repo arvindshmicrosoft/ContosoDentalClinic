@@ -1,0 +1,182 @@
+@model DentalClinicWebApp.Models.PatientRecord
+
+@{
+    ViewData["Title"] = "Edit Medical Record";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit text-warning me-2"></i>
+                        Edit Medical Record
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                        
+                        <input type="hidden" asp-for="Id" />
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="PatientId" class="form-label">Patient *</label>
+                                <select asp-for="PatientId" class="form-select" required disabled>
+                                    @{
+                                        var patients = ViewBag.Patients as IEnumerable<DentalClinicWebApp.Models.ApplicationUser>;
+                                        if (patients != null)
+                                        {
+                                            foreach (var patient in patients)
+                                            {
+                                                if (Model.PatientId == patient.Id)
+                                                {
+                                                    <option value="@patient.Id" selected>
+                                                        @patient.FirstName @patient.LastName (@patient.Email)
+                                                    </option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@patient.Id">
+                                                        @patient.FirstName @patient.LastName (@patient.Email)
+                                                    </option>
+                                                }
+                                            }
+                                        }
+                                    }
+                                </select>
+                                <input type="hidden" asp-for="PatientId" />
+                                <small class="form-text text-muted">Patient cannot be changed after record creation.</small>
+                                <span asp-validation-for="PatientId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="DoctorId" class="form-label">Doctor/Provider *</label>
+                                <select asp-for="DoctorId" class="form-select" required disabled>
+                                    @{
+                                        var doctors = ViewBag.Doctors as IEnumerable<DentalClinicWebApp.Models.ApplicationUser>;
+                                        if (doctors != null)
+                                        {
+                                            foreach (var doctor in doctors)
+                                            {
+                                                if (Model.DoctorId == doctor.Id)
+                                                {
+                                                    <option value="@doctor.Id" selected>
+                                                        @doctor.FirstName @doctor.LastName
+                                                    </option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@doctor.Id">
+                                                        @doctor.FirstName @doctor.LastName
+                                                    </option>
+                                                }
+                                            }
+                                        }
+                                    }
+                                </select>
+                                <input type="hidden" asp-for="DoctorId" />
+                                <small class="form-text text-muted">Doctor cannot be changed after record creation.</small>
+                                <span asp-validation-for="DoctorId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="RecordDate" class="form-label">Record Date *</label>
+                                <input asp-for="RecordDate" type="date" class="form-control" required />
+                                <span asp-validation-for="RecordDate" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    <input asp-for="IsActive" type="checkbox" class="form-check-input" />
+                                    <label asp-for="IsActive" class="form-check-label">Active Record</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label">Record Title *</label>
+                            <input asp-for="Title" class="form-control" 
+                                   placeholder="Enter a brief title for this medical record (e.g., 'Routine Cleaning', 'Initial Consultation')"/>
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="MedicalHistory" class="form-label">Medical History</label>
+                            <textarea asp-for="MedicalHistory" class="form-control" rows="4" 
+                                      placeholder="Enter patient's medical history, chronic conditions, previous surgeries, etc."></textarea>
+                            <span asp-validation-for="MedicalHistory" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Allergies" class="form-label">Allergies</label>
+                            <textarea asp-for="Allergies" class="form-control" rows="2" 
+                                      placeholder="List any known allergies (medications, materials, foods, etc.)"></textarea>
+                            <span asp-validation-for="Allergies" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Medications" class="form-label">Current Medications</label>
+                            <textarea asp-for="Medications" class="form-control" rows="3" 
+                                      placeholder="List current medications, dosages, and frequency"></textarea>
+                            <span asp-validation-for="Medications" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="TreatmentPlan" class="form-label">Treatment Plan</label>
+                            <textarea asp-for="TreatmentPlan" class="form-control" rows="4" 
+                                      placeholder="Outline the treatment plan, procedures, and recommendations"></textarea>
+                            <span asp-validation-for="TreatmentPlan" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Notes" class="form-label">Clinical Notes</label>
+                            <textarea asp-for="Notes" class="form-control" rows="4" 
+                                      placeholder="Enter clinical observations, patient responses, follow-up instructions, etc."></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>Cancel
+                                </a>
+                                <a asp-action="Index" class="btn btn-outline-secondary">
+                                    <i class="fas fa-list me-1"></i>Back to List
+                                </a>
+                            </div>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Update Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Record Information Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Record Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small><strong>Record ID:</strong> #@Model.Id</small>
+                        </div>
+                        <div class="col-md-6">
+                            <small><strong>Created:</strong> @Model.RecordDate.ToString("MM/dd/yyyy")</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

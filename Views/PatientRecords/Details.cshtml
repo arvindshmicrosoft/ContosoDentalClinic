@@ -1,0 +1,280 @@
+@model DentalClinicWebApp.Models.PatientRecord
+@using System.Net
+
+@{
+    ViewData["Title"] = "Medical Record Details";
+    
+    // Helper function to safely render text with line breaks (prevents XSS)
+    string SafeHtml(string? text) => string.IsNullOrEmpty(text) 
+        ? string.Empty 
+        : WebUtility.HtmlEncode(text).Replace("\n", "<br>");
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-file-medical text-primary me-2"></i>
+                    Medical Record Details
+                </h2>
+                <div class="btn-group">
+                    @if (User.IsInRole("Administrator") || (ViewContext.HttpContext.User.Identity != null && ViewContext.HttpContext.User.Identity.Name == Model.Doctor?.Email))
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </a>
+                    }
+                    <a asp-action="PatientHistory" asp-route-patientId="@Model.PatientId" class="btn btn-outline-info">
+                        <i class="fas fa-history me-1"></i>Patient History
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-1"></i>Back to List
+                    </a>
+                </div>
+            </div>
+
+            <!-- Record Overview Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Record Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Patient:</dt>
+                                <dd class="col-sm-8">
+                                    <strong>@Model.Patient.FirstName @Model.Patient.LastName</strong>
+                                    <br><small class="text-muted">@Model.Patient.Email</small>
+                                    <br><small class="text-muted">DOB: @Model.Patient.DateOfBirth.ToString("MM/dd/yyyy")</small>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Doctor:</dt>
+                                <dd class="col-sm-8">
+                                    <strong>@(Model.Doctor?.FirstName ?? "Unknown") @(Model.Doctor?.LastName ?? "Doctor")</strong>
+                                    <br><small class="text-muted">@(Model.Doctor?.Email ?? "No email")</small>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Record Date:</dt>
+                                <dd class="col-sm-8">
+                                    <strong>@Model.RecordDate.ToString("MM/dd/yyyy")</strong>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Status:</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </dd>
+                                
+                                <dt class="col-sm-4">Record ID:</dt>
+                                <dd class="col-sm-8">#@Model.Id</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medical Information -->
+            <div class="row">
+                <!-- Left Column -->
+                <div class="col-lg-6">
+                    <!-- Medical History -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user-md me-2"></i>
+                                Medical History
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(Model.MedicalHistory))
+                            {
+                                <p class="mb-0">@Html.Raw(SafeHtml(Model.MedicalHistory))</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-0">
+                                    <em>No medical history recorded.</em>
+                                </p>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Allergies -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                Allergies
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(Model.Allergies))
+                            {
+                                <p class="mb-0">@Html.Raw(SafeHtml(Model.Allergies))</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-0">
+                                    <em>No known allergies recorded.</em>
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-lg-6">
+                    <!-- Current Medications -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-pills me-2"></i>
+                                Current Medications
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(Model.Medications))
+                            {
+                                <p class="mb-0">@Html.Raw(SafeHtml(Model.Medications))</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-0">
+                                    <em>No current medications recorded.</em>
+                                </p>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Treatment Plan -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-clipboard-list me-2"></i>
+                                Treatment Plan
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(Model.TreatmentPlan))
+                            {
+                                <p class="mb-0">@Html.Raw(SafeHtml(Model.TreatmentPlan))</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-0">
+                                    <em>No treatment plan recorded.</em>
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clinical Notes -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-sticky-note me-2"></i>
+                        Clinical Notes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <p class="mb-0">@Html.Raw(SafeHtml(Model.Notes))</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">
+                            <em>No clinical notes recorded.</em>
+                        </p>
+                    }
+                </div>
+            </div>
+
+            <!-- Quick Add Note Section for Doctors -->
+            @if (User.IsInRole("Doctor") || User.IsInRole("DentalHygienist") || User.IsInRole("Administrator"))
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            Add Quick Note
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="quickNoteForm">
+                            <div class="mb-3">
+                                <textarea id="quickNoteText" class="form-control" rows="3" 
+                                          placeholder="Add a quick clinical note..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Add Note
+                            </button>
+                        </form>
+                        <div id="quickNoteResult" class="mt-3"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Quick note functionality
+        document.getElementById('quickNoteForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const noteText = document.getElementById('quickNoteText').value.trim();
+            if (!noteText) {
+                alert('Please enter a note before submitting.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('patientId', '@Model.PatientId');
+            formData.append('notes', noteText);
+            formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value || '');
+            
+            fetch('@Url.Action("AddQuickNote", "PatientRecords")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('quickNoteResult');
+                if (data.success) {
+                    resultDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                    document.getElementById('quickNoteText').value = '';
+                    // Auto-hide success message after 3 seconds
+                    setTimeout(() => {
+                        resultDiv.innerHTML = '';
+                    }, 3000);
+                } else {
+                    resultDiv.innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('quickNoteResult').innerHTML = 
+                    '<div class="alert alert-danger">An error occurred while adding the note.</div>';
+            });
+        });
+    </script>
+}

@@ -1,0 +1,141 @@
+@model DentalClinicWebApp.Models.Appointment
+
+@{
+    ViewData["Title"] = "Appointment Details";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fa fa-calendar"></i> Appointment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-3"><strong>Date & Time:</strong></div>
+                    <div class="col-sm-9">@Model.AppointmentDateTime.ToString("MMMM dd, yyyy h:mm tt")</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3"><strong>Patient:</strong></div>
+                    <div class="col-sm-9">@Model.Patient?.FirstName @Model.Patient?.LastName</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3"><strong>Doctor:</strong></div>
+                    <div class="col-sm-9">Dr. @Model.Doctor?.FirstName @Model.Doctor?.LastName</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3"><strong>Service:</strong></div>
+                    <div class="col-sm-9">@Model.Service?.Name</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3"><strong>Status:</strong></div>
+                    <div class="col-sm-9">
+                        @switch (Model.Status)
+                        {
+                            case DentalClinicWebApp.Models.AppointmentStatus.Scheduled:
+                                <span class="badge bg-primary">Scheduled</span>
+                                break;
+                            case DentalClinicWebApp.Models.AppointmentStatus.Confirmed:
+                                <span class="badge bg-success">Confirmed</span>
+                                break;
+                            case DentalClinicWebApp.Models.AppointmentStatus.InProgress:
+                                <span class="badge bg-warning text-dark">In Progress</span>
+                                break;
+                            case DentalClinicWebApp.Models.AppointmentStatus.Completed:
+                                <span class="badge bg-success">Completed</span>
+                                break;
+                            case DentalClinicWebApp.Models.AppointmentStatus.Cancelled:
+                                <span class="badge bg-danger">Cancelled</span>
+                                break;
+                            case DentalClinicWebApp.Models.AppointmentStatus.NoShow:
+                                <span class="badge bg-dark">No Show</span>
+                                break;
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-3"><strong>Notes:</strong></div>
+                        <div class="col-sm-9">@Model.Notes</div>
+                    </div>
+                }
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3"><strong>Created:</strong></div>
+                    <div class="col-sm-9">@Model.CreatedDate.ToString("MMM dd, yyyy h:mm tt")</div>
+                </div>
+                @if (Model.ModifiedDate.HasValue)
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-3"><strong>Last Modified:</strong></div>
+                        <div class="col-sm-9">@Model.ModifiedDate.Value.ToString("MMM dd, yyyy h:mm tt")</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fa fa-cog"></i> Actions</h5>
+            </div>
+            <div class="card-body">
+                @if (((User.IsInRole("FrontOffice") || User.IsInRole("Administrator")) || 
+                      (User.IsInRole("Patient") && Model.PatientId == ViewBag.CurrentUserId?.ToString())) && 
+                     Model.Status != DentalClinicWebApp.Models.AppointmentStatus.Cancelled)
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-sm mb-2 w-100">
+                        <i class="fa fa-edit"></i> Edit Appointment
+                    </a>
+                }
+                
+                @if (User.IsInRole("Doctor") || User.IsInRole("DentalHygienist") || User.IsInRole("Administrator") || User.IsInRole("FrontOffice"))
+                {
+                    <a asp-controller="PatientRecords" asp-action="PatientHistory" asp-route-patientId="@Model.PatientId" 
+                       class="btn btn-info btn-sm mb-2 w-100">
+                        <i class="fas fa-file-medical-alt"></i> View Medical History
+                    </a>
+                }
+                
+                @if (Model.Status == DentalClinicWebApp.Models.AppointmentStatus.Scheduled || Model.Status == DentalClinicWebApp.Models.AppointmentStatus.Confirmed)
+                {
+                    <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Are you sure you want to cancel this appointment?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger btn-sm mb-2 w-100">
+                            <i class="fa fa-times"></i> Cancel Appointment
+                        </button>
+                    </form>
+                }
+                
+                <a asp-action="Index" class="btn btn-secondary btn-sm w-100">
+                    <i class="fa fa-arrow-left"></i> Back to Appointments
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fa fa-info-circle"></i> Service Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Service:</strong> @Model.Service?.Name</p>
+                <p><strong>Price:</strong> $@Model.Service?.Price.ToString("F2")</p>
+                <p><strong>Duration:</strong> @Model.Service?.DurationMinutes minutes</p>
+                @if (!string.IsNullOrEmpty(Model.Service?.Description))
+                {
+                    <p><strong>Description:</strong> @Model.Service.Description</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

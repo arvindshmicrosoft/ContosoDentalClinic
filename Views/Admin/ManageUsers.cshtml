@@ -1,0 +1,126 @@
+@using Microsoft.AspNetCore.Identity
+@using DentalClinicWebApp.Models
+@{
+    ViewData["Title"] = "Manage Users";
+    var allUsers = ViewBag.AllUsers as List<(ApplicationUser User, IList<string> Roles)> ?? new List<(ApplicationUser, IList<string>)>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">User Management</h2>
+            
+            @if (TempData["Message"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Message"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <div class="mb-3">
+                <a asp-action="UserInfo" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to User Info
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">All Users</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Date of Birth</th>
+                                    <th>Phone</th>
+                                    <th>Created</th>
+                                    <th>Roles</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var userWithRoles in allUsers)
+                                {
+                                    var user = userWithRoles.User;
+                                    var roles = userWithRoles.Roles;
+                                    <tr>
+                                        <td>
+                                            <strong>@user.FirstName @user.LastName</strong>
+                                        </td>
+                                        <td>@user.Email</td>
+                                        <td>@user.DateOfBirth.ToString("MM/dd/yyyy")</td>
+                                        <td>@(string.IsNullOrEmpty(user.PhoneNumber) ? "Not provided" : user.PhoneNumber)</td>
+                                        <td>@user.CreatedDate.ToString("MM/dd/yyyy")</td>
+                                        <td>
+                                            @if (roles.Any())
+                                            {
+                                                foreach (var role in roles)
+                                                {
+                                                    <span class="badge bg-primary me-1">@role</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">No roles</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (user.IsActive)
+                                            {
+                                                <span class="badge bg-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    @if (!allUsers.Any())
+                    {
+                        <div class="text-center py-4">
+                            <p class="text-muted">No users found.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+}

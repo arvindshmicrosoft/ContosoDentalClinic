@@ -1,0 +1,296 @@
+@model DentalClinicWebApp.Models.Invoice
+@using DentalClinicWebApp.Models
+@{
+    ViewData["Title"] = "Create Invoice";
+    var patients = ViewBag.Patients as IList<ApplicationUser>;
+    var services = ViewBag.Services as IList<Service>;
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        Create New Invoice
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="invoiceForm" asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        
+                        <!-- Hidden fields for required properties -->
+                        <input asp-for="InvoiceNumber" type="hidden" />
+                        <input asp-for="InvoiceDate" type="hidden" />
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="PatientId" class="form-label">Patient</label>
+                                    <select asp-for="PatientId" class="form-select" required>
+                                        <option value="">-- Select Patient --</option>
+                                        @if (patients != null)
+                                        {
+                                            @foreach (var patient in patients)
+                                            {
+                                                <option value="@patient.Id">@patient.FirstName @patient.LastName (@patient.Email)</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span asp-validation-for="PatientId" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Invoice Number</label>
+                                    <input type="text" class="form-control" value="@Model.InvoiceNumber" readonly 
+                                           aria-label="Invoice Number" 
+                                           title="Auto-generated invoice number" />
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label asp-for="DueDate" class="form-label">Due Date</label>
+                                    <input asp-for="DueDate" type="date" class="form-control" value="@Model.DueDate.ToString("yyyy-MM-dd")" 
+                                           title="Invoice due date" />
+                                    <span asp-validation-for="DueDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <h5 class="mb-3">
+                            <i class="fas fa-tooth"></i>
+                            Services
+                        </h5>
+
+                        <div id="services-container">
+                            @if (services != null && services.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th width="5%">Select</th>
+                                                <th width="40%">Service</th>
+                                                <th width="15%">Unit Price</th>
+                                                <th width="15%">Quantity</th>
+                                                <th width="15%">Total</th>
+                                                <th width="10%">Duration</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var service in services)
+                                            {
+                                                <tr class="service-row" data-price="@service.Price">
+                                                    <td>
+                                                        <input type="checkbox" class="form-check-input service-checkbox" 
+                                                               data-service-id="@service.Id" value="@service.Id"
+                                                               onchange="updateServiceRow(this)"
+                                                               aria-label="Select @service.Name service"
+                                                               title="Select @service.Name service" />
+                                                    </td>
+                                                    <td>
+                                                        <strong>@service.Name</strong>
+                                                        @if (!string.IsNullOrEmpty(service.Description))
+                                                        {
+                                                            <br /><small class="text-muted">@service.Description</small>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <span class="text-success fw-bold">$@service.Price.ToString("F2")</span>
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="form-control quantity-input" 
+                                                               value="1" min="1" max="10" 
+                                                               disabled onchange="updateServiceRow(this)"
+                                                               aria-label="Quantity for @service.Name"
+                                                               title="Quantity for @service.Name"
+                                                               placeholder="1" />
+                                                    </td>
+                                                    <td>
+                                                        <span class="total-price fw-bold">$0.00</span>
+                                                    </td>
+                                                    <td>
+                                                        <small class="text-muted">@service.DurationMinutes min</small>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    No active services found. Please add services before creating invoices.
+                                </div>
+                            }
+                        </div>
+
+                        <hr />
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label asp-for="Notes" class="form-label">Notes (Optional)</label>
+                                    <textarea asp-for="Notes" class="form-control" rows="3" 
+                                              placeholder="Additional notes for this invoice..."
+                                              title="Optional notes for the invoice"></textarea>
+                                    <span asp-validation-for="Notes" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Invoice Summary</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Subtotal:</span>
+                                            <span id="subtotal">$0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span>Tax (8%):</span>
+                                            <span id="tax">$0.00</span>
+                                        </div>
+                                        <hr />
+                                        <div class="d-flex justify-content-between fw-bold">
+                                            <span>Total:</span>
+                                            <span id="total">$0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Create Invoice
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to List
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        function updateServiceRow(element) {
+            const row = element.closest('.service-row');
+            const checkbox = row.querySelector('.service-checkbox');
+            const quantityInput = row.querySelector('.quantity-input');
+            const totalSpan = row.querySelector('.total-price');
+            const unitPrice = parseFloat(row.dataset.price);
+            
+            if (checkbox.checked) {
+                quantityInput.disabled = false;
+                const quantity = parseInt(quantityInput.value) || 1;
+                const total = unitPrice * quantity;
+                totalSpan.textContent = '$' + total.toFixed(2);
+                row.classList.add('table-success');
+            } else {
+                quantityInput.disabled = true;
+                quantityInput.value = 1;
+                totalSpan.textContent = '$0.00';
+                row.classList.remove('table-success');
+            }
+            
+            updateInvoiceSummary();
+        }
+        
+        function updateInvoiceSummary() {
+            let subtotal = 0;
+            
+            document.querySelectorAll('.service-row').forEach(row => {
+                const checkbox = row.querySelector('.service-checkbox');
+                if (checkbox.checked) {
+                    const unitPrice = parseFloat(row.dataset.price);
+                    const quantity = parseInt(row.querySelector('.quantity-input').value) || 1;
+                    subtotal += unitPrice * quantity;
+                }
+            });
+            
+            const tax = subtotal * 0.08;
+            const total = subtotal + tax;
+            
+            document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
+            document.getElementById('tax').textContent = '$' + tax.toFixed(2);
+            document.getElementById('total').textContent = '$' + total.toFixed(2);
+        }
+        
+        // Initialize quantity inputs as disabled
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.quantity-input').forEach(input => {
+                input.disabled = true;
+            });
+        });
+        
+        // Form validation and dynamic input management
+        document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+            console.log('Form submission started...');
+            
+            const selectedServices = document.querySelectorAll('.service-checkbox:checked');
+            console.log('Selected services:', selectedServices.length);
+            
+            if (selectedServices.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one service for the invoice.');
+                console.log('Form submission prevented - no services selected');
+                return false;
+            }
+            
+            const patientSelect = document.querySelector('select[name="PatientId"]');
+            if (!patientSelect.value) {
+                e.preventDefault();
+                alert('Please select a patient for the invoice.');
+                console.log('Form submission prevented - no patient selected');
+                return false;
+            }
+
+            console.log('Patient ID:', patientSelect.value);
+
+            // Remove existing hidden inputs
+            document.querySelectorAll('input[name="ServiceIds"], input[name="Quantities"]').forEach(input => {
+                if (input.type === 'hidden') {
+                    input.remove();
+                }
+            });
+
+            // Create hidden inputs for selected services only
+            selectedServices.forEach((checkbox, index) => {
+                const row = checkbox.closest('.service-row');
+                const quantityInput = row.querySelector('.quantity-input');
+                
+                // Create hidden input for ServiceId
+                const serviceIdInput = document.createElement('input');
+                serviceIdInput.type = 'hidden';
+                serviceIdInput.name = 'ServiceIds';
+                serviceIdInput.value = checkbox.value;
+                this.appendChild(serviceIdInput);
+                console.log('Added ServiceId:', checkbox.value);
+                
+                // Create hidden input for Quantity
+                const quantityHiddenInput = document.createElement('input');
+                quantityHiddenInput.type = 'hidden';
+                quantityHiddenInput.name = 'Quantities';
+                quantityHiddenInput.value = quantityInput.value || '1';
+                this.appendChild(quantityHiddenInput);
+                console.log('Added Quantity:', quantityInput.value || '1');
+            });
+
+            console.log('Form submission proceeding...');
+            return true;
+        });
+    </script>
+}

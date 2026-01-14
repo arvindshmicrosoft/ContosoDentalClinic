@@ -1,0 +1,648 @@
+@model DentalClinicWebApp.Models.Invoice
+
+@{
+    ViewData["Title"] = "Invoice Details";
+}
+
+@* Display success/error messages *@
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>@ViewData["Title"]</h1>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Back to Invoices
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Invoice @Model.InvoiceNumber</h5>
+                @switch (Model.Status)
+                {
+                    case DentalClinicWebApp.Models.InvoiceStatus.Pending:
+                        <span class="badge bg-warning text-dark fs-6">Pending</span>
+                        break;
+                    case DentalClinicWebApp.Models.InvoiceStatus.PartiallyPaid:
+                        <span class="badge bg-info fs-6">Partially Paid</span>
+                        break;
+                    case DentalClinicWebApp.Models.InvoiceStatus.Paid:
+                        <span class="badge bg-success fs-6">Paid</span>
+                        break;
+                    case DentalClinicWebApp.Models.InvoiceStatus.Overdue:
+                        <span class="badge bg-danger fs-6">Overdue</span>
+                        break;
+                    case DentalClinicWebApp.Models.InvoiceStatus.Cancelled:
+                        <span class="badge bg-secondary fs-6">Cancelled</span>
+                        break;
+                }
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Patient Information</h6>
+                        <p class="mb-1"><strong>@Model.Patient!.FirstName @Model.Patient.LastName</strong></p>
+                        <p class="mb-1">@Model.Patient.Email</p>
+                        @if (!string.IsNullOrEmpty(Model.Patient.PhoneNumber))
+                        {
+                            <p class="mb-1">@Model.Patient.PhoneNumber</p>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Patient.Address))
+                        {
+                            <p class="mb-0">@Model.Patient.Address</p>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Invoice Information</h6>
+                        <p class="mb-1"><strong>Invoice #:</strong> @Model.InvoiceNumber</p>
+                        <p class="mb-1"><strong>Invoice Date:</strong> @Model.InvoiceDate.ToString("MMM dd, yyyy")</p>
+                        <p class="mb-0"><strong>Due Date:</strong> @Model.DueDate.ToString("MMM dd, yyyy")</p>
+                    </div>
+                </div>
+
+                <h6 class="mb-3">Services & Items</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Service</th>
+                                <th>Description</th>
+                                <th class="text-end">Quantity</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.InvoiceItems!)
+                            {
+                                <tr>
+                                    <td>@item.Service!.Name</td>
+                                    <td>@item.Description</td>
+                                    <td class="text-end">@item.Quantity</td>
+                                    <td class="text-end">$@item.UnitPrice.ToString("F2")</td>
+                                    <td class="text-end">$@item.TotalPrice.ToString("F2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <h6 class="mb-2">Notes</h6>
+                    <p class="border p-3 bg-light">@Model.Notes</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Invoice Summary -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Invoice Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span>$@Model.SubTotal.ToString("F2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax (8%):</span>
+                    <span>$@Model.TaxAmount.ToString("F2")</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-2 fw-bold">
+                    <span>Total Amount:</span>
+                    <span>$@Model.TotalAmount.ToString("F2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-success">
+                    <span>Paid Amount:</span>
+                    <span>$@Model.PaidAmount.ToString("F2")</span>
+                </div>
+                <div class="d-flex justify-content-between fw-bold @(Model.BalanceAmount > 0 ? "text-danger" : "text-success")">
+                    <span>Balance Due:</span>
+                    <span>$@Model.BalanceAmount.ToString("F2")</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Actions -->
+        @if (Model.BalanceAmount > 0 && Model.Status != DentalClinicWebApp.Models.InvoiceStatus.Cancelled)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Make Payment</h6>
+                </div>
+                <div class="card-body">
+                    <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#paymentModal" 
+                            data-invoice-id="@Model.Id" data-balance="@Model.BalanceAmount" data-invoice-number="@Model.InvoiceNumber">
+                        <i class="fa fa-credit-card"></i> Pay Now
+                    </button>
+                </div>
+            </div>
+        }
+
+        <!-- Payment History -->
+        @if (Model.Payments != null && Model.Payments.Any())
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Payment History</h6>
+                </div>
+                <div class="card-body">
+                    @foreach (var payment in Model.Payments.OrderByDescending(p => p.PaymentDate))
+                    {
+                        <div class="mb-3 pb-3 @(payment != Model.Payments.Last() ? "border-bottom" : "")">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-bold text-success">$@payment.Amount.ToString("F2")</div>
+                                    <small class="text-muted">@payment.PaymentDate.ToString("MMM dd, yyyy hh:mm tt")</small>
+                                    @if (!string.IsNullOrEmpty(payment.Notes))
+                                    {
+                                        <div class="small text-muted mt-1">@payment.Notes</div>
+                                    }
+                                </div>
+                                <div class="text-end">
+                                    <div class="small fw-bold">@payment.PaymentMethod</div>
+                                    <div class="small text-muted">ID: @payment.TransactionId</div>
+                                    
+                                    @* Show payment method specific details *@
+                                    @if (payment.CreditCardPayment != null)
+                                    {
+                                        <div class="small text-muted mt-1">
+                                            <div>Card: @payment.CreditCardPayment.CardNumber</div>
+                                            <div>@payment.CreditCardPayment.CardholderName</div>
+                                        </div>
+                                    }
+                                    @if (payment.CheckPayment != null)
+                                    {
+                                        <div class="small text-muted mt-1">
+                                            <div>Check #: @payment.CheckPayment.CheckNumber</div>
+                                            <div>@payment.CheckPayment.BankName</div>
+                                            <div>Account: @payment.CheckPayment.AccountNumber</div>
+                                        </div>
+                                    }
+                                    @if (payment.BankAccountPayment != null)
+                                    {
+                                        <div class="small text-muted mt-1">
+                                            <div>@payment.BankAccountPayment.AccountHolderName</div>
+                                            <div>@payment.BankAccountPayment.BankName</div>
+                                            <div>Account: @payment.BankAccountPayment.AccountNumber</div>
+                                            <div>@(payment.BankAccountPayment.AccountType.ToString().Replace("Business", "Business "))</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">Make Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="paymentForm" method="post">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="invoiceId" name="InvoiceId" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Invoice Number:</label>
+                        <p id="invoiceNumber" class="fw-bold"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Outstanding Balance:</label>
+                        <p id="balanceAmount" class="fw-bold text-danger"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paymentAmount" class="form-label">Payment Amount *</label>
+                        <input type="number" class="form-control" id="paymentAmount" name="Amount" step="0.01" min="0.01" required 
+                               title="Enter the payment amount" placeholder="0.00" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paymentMethod" class="form-label">Payment Method *</label>
+                        <select class="form-select" id="paymentMethod" name="PaymentMethod" required 
+                                title="Select payment method" aria-label="Payment method selection">
+                            <option value="">Select payment method...</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Debit Card">Debit Card</option>
+                            <option value="Check">Check</option>
+                            <option value="Bank Account">Bank Account</option>
+                            <option value="Insurance">Insurance</option>
+                        </select>
+                    </div>
+
+                    <!-- Credit Card Payment Details -->
+                    <div id="creditCardDetails" class="payment-details" style="display: none;">
+                        <h6 class="border-bottom pb-2 mb-3">Credit Card Information</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="creditCardNumber" class="form-label">Card Number *</label>
+                                <input type="text" class="form-control" id="creditCardNumber" name="CreditCard.CardNumber" 
+                                       placeholder="1234 5678 9012 3456" maxlength="19" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="cardholderName" class="form-label">Cardholder Name *</label>
+                                <input type="text" class="form-control" id="cardholderName" name="CreditCard.CardholderName" 
+                                       placeholder="John Doe" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="expirationDate" class="form-label">Expiration Date *</label>
+                                <input type="text" class="form-control" id="expirationDate" name="CreditCard.ExpirationDate" 
+                                       placeholder="MM/YYYY" maxlength="7" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="cvv" class="form-label">CVV *</label>
+                                <input type="text" class="form-control" id="cvv" name="CreditCard.CVV" 
+                                       placeholder="123" maxlength="4" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="billingAddress" class="form-label">Billing Address</label>
+                            <input type="text" class="form-control" id="billingAddress" name="CreditCard.BillingAddress" 
+                                   placeholder="123 Main St" maxlength="200" />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="billingCity" class="form-label">City</label>
+                                <input type="text" class="form-control" id="billingCity" name="CreditCard.BillingCity" 
+                                       placeholder="Anytown" maxlength="100" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="billingState" class="form-label">State/Province</label>
+                                <input type="text" class="form-control" id="billingState" name="CreditCard.BillingState" 
+                                       placeholder="CA" maxlength="20" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="billingZipCode" class="form-label">ZIP/Postal Code</label>
+                                <input type="text" class="form-control" id="billingZipCode" name="CreditCard.BillingZipCode" 
+                                       placeholder="12345" maxlength="20" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Check Payment Details -->
+                    <div id="checkDetails" class="payment-details" style="display: none;">
+                        <h6 class="border-bottom pb-2 mb-3">Check Information</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="checkNumber" class="form-label">Check Number *</label>
+                                <input type="text" class="form-control" id="checkNumber" name="Check.CheckNumber" 
+                                       placeholder="1001" maxlength="20" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="checkBankName" class="form-label">Bank Name *</label>
+                                <input type="text" class="form-control" id="checkBankName" name="Check.BankName" 
+                                       placeholder="First National Bank" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="checkRoutingNumber" class="form-label">Bank Routing Number *</label>
+                                <input type="text" class="form-control" id="checkRoutingNumber" name="Check.RoutingNumber" 
+                                       placeholder="123456789" maxlength="9" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="checkAccountNumber" class="form-label">Account Number *</label>
+                                <input type="text" class="form-control" id="checkAccountNumber" name="Check.AccountNumber" 
+                                       placeholder="1234567890" maxlength="20" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="checkMemo" class="form-label">Memo</label>
+                            <input type="text" class="form-control" id="checkMemo" name="Check.Memo" 
+                                   placeholder="Dental services payment" maxlength="200" />
+                        </div>
+                    </div>
+
+                    <!-- Bank Account Payment Details -->
+                    <div id="bankAccountDetails" class="payment-details" style="display: none;">
+                        <h6 class="border-bottom pb-2 mb-3">Bank Account Information</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="achRoutingNumber" class="form-label">ACH Routing Number *</label>
+                                <input type="text" class="form-control" id="achRoutingNumber" name="BankAccount.RoutingNumber" 
+                                       placeholder="123456789" maxlength="9" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="achAccountNumber" class="form-label">Account Number *</label>
+                                <input type="text" class="form-control" id="achAccountNumber" name="BankAccount.AccountNumber" 
+                                       placeholder="1234567890" maxlength="20" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="accountHolderName" class="form-label">Account Holder Name *</label>
+                                <input type="text" class="form-control" id="accountHolderName" name="BankAccount.AccountHolderName" 
+                                       placeholder="John Doe" maxlength="100" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="accountType" class="form-label">Account Type *</label>
+                                <select class="form-select" id="accountType" name="BankAccount.AccountType">
+                                    <option value="">Select account type...</option>
+                                    <option value="0">Checking Account</option>
+                                    <option value="1">Savings Account</option>
+                                    <option value="2">Business Checking</option>
+                                    <option value="3">Business Savings</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="achBankName" class="form-label">Bank Name *</label>
+                                <input type="text" class="form-control" id="achBankName" name="BankAccount.BankName" 
+                                       placeholder="First National Bank" maxlength="100" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="achNotes" class="form-label">Additional Notes</label>
+                                <input type="text" class="form-control" id="achNotes" name="BankAccount.Notes" 
+                                       placeholder="Optional notes" maxlength="200" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="paymentNotes" class="form-label">Payment Notes</label>
+                        <textarea class="form-control" id="paymentNotes" name="Notes" rows="2" 
+                                  placeholder="Optional notes about this payment" maxlength="500"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Process Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up payment form...');
+            
+            // Initialize payment modal event listener
+            const paymentModal = document.getElementById('paymentModal');
+            if (paymentModal) {
+                paymentModal.addEventListener('show.bs.modal', function (event) {
+                    console.log('Payment modal opening...');
+                    const button = event.relatedTarget;
+                    const invoiceId = button.getAttribute('data-invoice-id');
+                    const balance = button.getAttribute('data-balance');
+                    const invoiceNumber = button.getAttribute('data-invoice-number');
+                    
+                    document.getElementById('invoiceId').value = invoiceId;
+                    document.getElementById('invoiceNumber').textContent = invoiceNumber;
+                    document.getElementById('balanceAmount').textContent = '$' + parseFloat(balance).toFixed(2);
+                    document.getElementById('paymentAmount').max = balance;
+                    document.getElementById('paymentAmount').value = balance;
+                    
+                    document.getElementById('paymentForm').action = '/Invoices/Pay/' + invoiceId;
+                });
+            }
+
+            // Handle payment method selection
+            const paymentMethodSelect = document.getElementById('paymentMethod');
+            if (paymentMethodSelect) {
+                paymentMethodSelect.addEventListener('change', function() {
+                    console.log('Payment method changed to:', this.value);
+                    const selectedMethod = this.value;
+                    const paymentDetails = document.querySelectorAll('.payment-details');
+                    
+                    // Hide all payment detail sections
+                    paymentDetails.forEach(detail => {
+                        detail.style.display = 'none';
+                        // Clear required attributes
+                        detail.querySelectorAll('input, select').forEach(input => {
+                            input.removeAttribute('required');
+                        });
+                    });
+                    
+                    // Show and set required fields for selected payment method
+                    if (selectedMethod === 'Credit Card' || selectedMethod === 'Debit Card') {
+                        console.log('Showing credit card details');
+                        const creditCardSection = document.getElementById('creditCardDetails');
+                        if (creditCardSection) {
+                            creditCardSection.style.display = 'block';
+                            
+                            // Set required fields for credit card
+                            const cardNumber = document.getElementById('creditCardNumber');
+                            const cardholderName = document.getElementById('cardholderName');
+                            const expirationDate = document.getElementById('expirationDate');
+                            const cvv = document.getElementById('cvv');
+                            
+                            if (cardNumber) cardNumber.setAttribute('required', 'required');
+                            if (cardholderName) cardholderName.setAttribute('required', 'required');
+                            if (expirationDate) expirationDate.setAttribute('required', 'required');
+                            if (cvv) cvv.setAttribute('required', 'required');
+                        }
+                    } else if (selectedMethod === 'Check') {
+                        console.log('Showing check details');
+                        const checkSection = document.getElementById('checkDetails');
+                        if (checkSection) {
+                            checkSection.style.display = 'block';
+                            
+                            // Set required fields for check
+                            const checkNumber = document.getElementById('checkNumber');
+                            const checkBankName = document.getElementById('checkBankName');
+                            const checkRoutingNumber = document.getElementById('checkRoutingNumber');
+                            const checkAccountNumber = document.getElementById('checkAccountNumber');
+                            
+                            if (checkNumber) checkNumber.setAttribute('required', 'required');
+                            if (checkBankName) checkBankName.setAttribute('required', 'required');
+                            if (checkRoutingNumber) checkRoutingNumber.setAttribute('required', 'required');
+                            if (checkAccountNumber) checkAccountNumber.setAttribute('required', 'required');
+                        }
+                    } else if (selectedMethod === 'Bank Account') {
+                        console.log('Showing bank account details');
+                        const bankAccountSection = document.getElementById('bankAccountDetails');
+                        if (bankAccountSection) {
+                            bankAccountSection.style.display = 'block';
+                            
+                            // Set required fields for bank account
+                            const achRoutingNumber = document.getElementById('achRoutingNumber');
+                            const achAccountNumber = document.getElementById('achAccountNumber');
+                            const accountHolderName = document.getElementById('accountHolderName');
+                            const accountType = document.getElementById('accountType');
+                            const achBankName = document.getElementById('achBankName');
+                            
+                            if (achRoutingNumber) achRoutingNumber.setAttribute('required', 'required');
+                            if (achAccountNumber) achAccountNumber.setAttribute('required', 'required');
+                            if (accountHolderName) accountHolderName.setAttribute('required', 'required');
+                            if (accountType) accountType.setAttribute('required', 'required');
+                            if (achBankName) achBankName.setAttribute('required', 'required');
+                        }
+                    }
+                });
+            }
+
+            // Format credit card number input
+            const creditCardNumber = document.getElementById('creditCardNumber');
+            if (creditCardNumber) {
+                creditCardNumber.addEventListener('input', function() {
+                    let value = this.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
+                    const formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+                    if (formattedValue !== this.value) {
+                        this.value = formattedValue;
+                    }
+                });
+
+                // Real-time credit card validation feedback
+                creditCardNumber.addEventListener('blur', function() {
+                    const cardNumber = this.value.replace(/\s/g, '');
+                    if (cardNumber.length > 0) {
+                        if (cardNumber.length < 13 || cardNumber.length > 19) {
+                            this.setCustomValidity('Credit card number must be between 13 and 19 digits');
+                        } else if (!isValidLuhn(cardNumber)) {
+                            this.setCustomValidity('Please enter a valid credit card number');
+                        } else {
+                            this.setCustomValidity('');
+                        }
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+
+            // Format expiration date input
+            const expirationDate = document.getElementById('expirationDate');
+            if (expirationDate) {
+                expirationDate.addEventListener('input', function() {
+                    let value = this.value.replace(/\D/g, '');
+                    if (value.length >= 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2, 6);
+                    }
+                    this.value = value;
+                });
+            }
+
+            // Allow only numbers for numeric fields
+            function enforceNumericInput(elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.addEventListener('input', function() {
+                        this.value = this.value.replace(/[^0-9]/g, '');
+                    });
+                }
+            }
+
+            // Apply numeric formatting to relevant fields
+            enforceNumericInput('cvv');
+            enforceNumericInput('checkNumber');
+            enforceNumericInput('checkRoutingNumber');
+            enforceNumericInput('checkAccountNumber');
+            enforceNumericInput('achRoutingNumber');
+            enforceNumericInput('achAccountNumber');
+
+            // Form validation before submission
+            const paymentForm = document.getElementById('paymentForm');
+            if (paymentForm) {
+                paymentForm.addEventListener('submit', function(e) {
+                    const paymentMethod = document.getElementById('paymentMethod').value;
+                    let isValid = true;
+                    let errorMessage = '';
+
+                    if (paymentMethod === 'Credit Card' || paymentMethod === 'Debit Card') {
+                        const cardNumber = document.getElementById('creditCardNumber').value.replace(/\s/g, '');
+                        const expirationDate = document.getElementById('expirationDate').value;
+                        const cvv = document.getElementById('cvv').value;
+
+                        if (cardNumber.length < 13 || cardNumber.length > 19) {
+                            isValid = false;
+                            errorMessage = 'Invalid credit card number length.';
+                        } else if (!isValidLuhn(cardNumber)) {
+                            isValid = false;
+                            errorMessage = 'Please enter a valid credit card number.';
+                        } else if (!/^(0[1-9]|1[0-2])\/20[2-9][0-9]$/.test(expirationDate)) {
+                            isValid = false;
+                            errorMessage = 'Invalid expiration date format. Use MM/YYYY.';
+                        } else if (cvv.length < 3 || cvv.length > 4) {
+                            isValid = false;
+                            errorMessage = 'CVV must be 3 or 4 digits.';
+                        }
+                    } else if (paymentMethod === 'Check') {
+                        const routingNumber = document.getElementById('checkRoutingNumber').value;
+                        if (routingNumber.length !== 9) {
+                            isValid = false;
+                            errorMessage = 'Bank routing number must be exactly 9 digits.';
+                        }
+                    } else if (paymentMethod === 'Bank Account') {
+                        const routingNumber = document.getElementById('achRoutingNumber').value;
+                        if (routingNumber.length !== 9) {
+                            isValid = false;
+                            errorMessage = 'ACH routing number must be exactly 9 digits.';
+                        }
+                    }
+
+                    if (!isValid) {
+                        e.preventDefault();
+                        alert(errorMessage);
+                        return false;
+                    }
+                });
+            }
+
+            // Luhn algorithm validation for credit card numbers
+            function isValidLuhn(cardNumber) {
+                // Remove any non-digit characters
+                cardNumber = cardNumber.replace(/\D/g, '');
+                
+                if (cardNumber.length === 0) return false;
+                
+                let sum = 0;
+                let alternate = false;
+                
+                // Process digits from right to left
+                for (let i = cardNumber.length - 1; i >= 0; i--) {
+                    let digit = parseInt(cardNumber.charAt(i), 10);
+                    
+                    if (alternate) {
+                        digit *= 2;
+                        if (digit > 9) {
+                            digit = (digit % 10) + 1;
+                        }
+                    }
+                    
+                    sum += digit;
+                    alternate = !alternate;
+                }
+                
+                return (sum % 10) === 0;
+            }
+        });
+    </script>
+}

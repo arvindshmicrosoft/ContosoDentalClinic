@@ -1,0 +1,123 @@
+@model IEnumerable<DentalClinicWebApp.Models.Appointment>
+
+@{
+    ViewData["Title"] = "Appointments";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="row mb-3">
+    <div class="col">
+        @if (User.IsInRole("Patient") || User.IsInRole("FrontOffice") || User.IsInRole("Administrator"))
+        {
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Schedule New Appointment
+            </a>
+        }
+        @if (User.IsInRole("Doctor") || User.IsInRole("DentalHygienist") || User.IsInRole("Administrator") || User.IsInRole("FrontOffice"))
+        {
+            <a asp-controller="PatientRecords" asp-action="Index" class="btn btn-info">
+                <i class="fas fa-file-medical-alt"></i> Medical Records
+            </a>
+        }
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Patient</th>
+                    <th>Doctor</th>
+                    <th>Service</th>
+                    <th>Notes</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.AppointmentDateTime.ToString("MMM dd, yyyy h:mm tt")</td>
+                        <td>@item.Patient?.FirstName @item.Patient?.LastName</td>
+                        <td>Dr. @item.Doctor?.FirstName @item.Doctor?.LastName</td>
+                        <td>@item.Service?.Name</td>
+                        <td class="text-truncate" style="max-width: 200px;" title="@item.Notes">
+                            @if (!string.IsNullOrEmpty(item.Notes))
+                            {
+                                @(item.Notes.Length > 50 ? item.Notes.Substring(0, 50) + "..." : item.Notes)
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @switch (item.Status)
+                            {
+                                case DentalClinicWebApp.Models.AppointmentStatus.Scheduled:
+                                    <span class="badge bg-primary">Scheduled</span>
+                                    break;
+                                case DentalClinicWebApp.Models.AppointmentStatus.Confirmed:
+                                    <span class="badge bg-success">Confirmed</span>
+                                    break;
+                                case DentalClinicWebApp.Models.AppointmentStatus.InProgress:
+                                    <span class="badge bg-warning text-dark">In Progress</span>
+                                    break;
+                                case DentalClinicWebApp.Models.AppointmentStatus.Completed:
+                                    <span class="badge bg-success">Completed</span>
+                                    break;
+                                case DentalClinicWebApp.Models.AppointmentStatus.Cancelled:
+                                    <span class="badge bg-danger">Cancelled</span>
+                                    break;
+                                case DentalClinicWebApp.Models.AppointmentStatus.NoShow:
+                                    <span class="badge bg-dark">No Show</span>
+                                    break;
+                            }
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info" title="View appointment details">
+                                    <i class="fa fa-eye"></i> View
+                                </a>
+                                @if (item.Status != DentalClinicWebApp.Models.AppointmentStatus.Cancelled && 
+                                     (User.IsInRole("FrontOffice") || User.IsInRole("Administrator") || 
+                                      (User.IsInRole("Patient") && item.PatientId == ViewBag.CurrentUserId?.ToString()) ||
+                                      ((User.IsInRole("Doctor") || User.IsInRole("DentalHygienist")) && item.DoctorId == ViewBag.CurrentUserId?.ToString())))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit appointment">
+                                        <i class="fa fa-edit"></i> Edit
+                                    </a>
+                                }
+                                @if (item.Status == DentalClinicWebApp.Models.AppointmentStatus.Scheduled || item.Status == DentalClinicWebApp.Models.AppointmentStatus.Confirmed)
+                                {
+                                    <form asp-action="Cancel" asp-route-id="@item.Id" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to cancel this appointment?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel appointment">
+                                            <i class="fa fa-times"></i> Cancel
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h5><i class="fa fa-info-circle"></i> No appointments found</h5>
+        <p>There are currently no appointments to display.</p>
+        @if (User.IsInRole("Patient") || User.IsInRole("FrontOffice") || User.IsInRole("Administrator"))
+        {
+            <a asp-action="Create" class="btn btn-primary">Schedule Your First Appointment</a>
+        }
+    </div>
+}

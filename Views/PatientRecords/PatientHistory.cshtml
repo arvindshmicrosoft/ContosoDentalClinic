@@ -1,0 +1,431 @@
+@model DentalClinicWebApp.Models.PatientHistoryViewModel
+@using System.Net
+
+@{
+    ViewData["Title"] = $"Patient History - {Model.Patient.FirstName} {Model.Patient.LastName}";
+    
+    // Helper function to safely render text with line breaks (prevents XSS)
+    string SafeHtml(string? text) => string.IsNullOrEmpty(text) 
+        ? string.Empty 
+        : WebUtility.HtmlEncode(text).Replace("\n", "<br>");
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>
+                        <i class="fas fa-user-medical text-primary me-2"></i>
+                        Patient Medical History
+                    </h2>
+                    <h5 class="text-muted">@Model.Patient.FirstName @Model.Patient.LastName</h5>
+                </div>
+                <div class="btn-group">
+                    @if (User.IsInRole("Doctor") || User.IsInRole("DentalHygienist") || User.IsInRole("Administrator"))
+                    {
+                        <a asp-action="Create" asp-route-patientId="@Model.Patient.Id" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Add Record
+                        </a>
+                    }
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-list me-1"></i>All Records
+                    </a>
+                </div>
+            </div>
+
+            <!-- Patient Overview -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Patient Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Full Name:</dt>
+                                <dd class="col-sm-8">@Model.Patient.FirstName @Model.Patient.LastName</dd>
+                                
+                                <dt class="col-sm-4">Email:</dt>
+                                <dd class="col-sm-8">@Model.Patient.Email</dd>
+                                
+                                <dt class="col-sm-4">Phone:</dt>
+                                <dd class="col-sm-8">@Model.Patient.PhoneNumber</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Date of Birth:</dt>
+                                <dd class="col-sm-8">@Model.Patient.DateOfBirth.ToString("MM/dd/yyyy")</dd>
+                                
+                                <dt class="col-sm-4">Age:</dt>
+                                <dd class="col-sm-8">@((DateTime.Now - Model.Patient.DateOfBirth).Days / 365) years</dd>
+                                
+                                <dt class="col-sm-4">Gender:</dt>
+                                <dd class="col-sm-8">@Model.Patient.Gender</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <dl class="row">
+                                <dt class="col-sm-2">Address:</dt>
+                                <dd class="col-sm-10">@Model.Patient.Address</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Medical History Summary -->
+            @if (Model.MedicalHistorySummary != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-brain me-2"></i>
+                            AI Medical History Summary
+                        </h5>
+                        <small class="badge bg-light text-dark">
+                            Generated @Model.MedicalHistorySummary.CreatedDate.ToString("MM/dd/yyyy")
+                        </small>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <span class="field-label">AI-Generated Summary:</span> This summary was automatically created from @Model.MedicalHistorySummary.SourceRecordsCount medical record(s) 
+                            using @Model.MedicalHistorySummary.ModelUsed. Please review individual records for complete details.
+                        </div>
+                        
+                        <div class="summary-content">
+                            @{
+                                // First HTML-encode the AI summary to prevent XSS, then convert formatting
+                                var encodedSummary = WebUtility.HtmlEncode(Model.MedicalHistorySummary.AiGeneratedSummary);
+                                // Convert markdown-style formatting to HTML (safe after encoding)
+                                var summaryHtml = encodedSummary
+                                    .Replace("**", "").Replace("**", "")  // Remove bold formatting
+                                    .Replace("• ", "<li>").Replace("\n\n", "</ul><br><ul>")
+                                    .Replace("\n", "<br>");
+                                
+                                // Fix ul tags
+                                if (summaryHtml.Contains("<li>"))
+                                {
+                                    summaryHtml = "<ul>" + summaryHtml + "</ul>";
+                                    summaryHtml = summaryHtml.Replace("<br><ul>", "<ul>").Replace("</ul><br>", "</ul>");
+                                }
+                            }
+                            @Html.Raw(summaryHtml)
+                        </div>
+                        
+                        <div class="mt-3 text-muted">
+                            <small>
+                                <i class="fas fa-clock me-1"></i>
+                                Last updated: @Model.MedicalHistorySummary.LastUpdatedDate.ToString("MM/dd/yyyy hh:mm tt")
+                                | Created by: @Model.MedicalHistorySummary.CreatedBy?.FirstName @Model.MedicalHistorySummary.CreatedBy?.LastName
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (Model.MedicalRecords.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Medical History Summary
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (ViewBag.SummaryError != null)
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                @ViewBag.SummaryError
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                AI-generated medical history summary is being created. Please refresh the page in a moment to see the summary.
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Timeline Container -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-timeline me-2"></i>
+                                Medical Timeline
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (Model.MedicalRecords.Any() || Model.Appointments.Any())
+                            {
+                                <div class="timeline">
+                                    @{
+                                        // Combine and sort medical records and appointments by date
+                                        var medicalRecordItems = Model.MedicalRecords.Select(r => new { 
+                                            Date = r.RecordDate, 
+                                            Type = "Record", 
+                                            Record = (DentalClinicWebApp.Models.PatientRecord?)r, 
+                                            Appointment = (DentalClinicWebApp.Models.Appointment?)null 
+                                        });
+                                        
+                                        var appointmentItems = Model.Appointments.Select(a => new { 
+                                            Date = a.AppointmentDateTime.Date, 
+                                            Type = "Appointment", 
+                                            Record = (DentalClinicWebApp.Models.PatientRecord?)null, 
+                                            Appointment = (DentalClinicWebApp.Models.Appointment?)a 
+                                        });
+                                        
+                                        var allItems = medicalRecordItems.Concat(appointmentItems).OrderByDescending(x => x.Date);
+                                    }
+                                    
+                                    @foreach (var timelineItem in allItems)
+                                    {
+                                        <div class="timeline-item mb-4">
+                                            @if (timelineItem.Type == "Record" && timelineItem.Record != null)
+                                            {
+                                                var record = timelineItem.Record;
+                                                <div class="row">
+                                                    <div class="col-md-2">
+                                                        <div class="timeline-badge bg-primary">
+                                                            <i class="fas fa-file-medical-alt"></i>
+                                                        </div>
+                                                        <div class="timeline-date">
+                                                            @record.RecordDate.ToString("MM/dd/yyyy")
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-10">
+                                                        <div class="card">
+                                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                                <h6 class="mb-0">
+                                                                    <i class="fas fa-file-medical text-primary me-2"></i>
+                                                                    Medical Record
+                                                                </h6>
+                                                                <div>
+                                                                    <small class="text-muted">by Dr. @record.Doctor.FirstName @record.Doctor.LastName</small>
+                                                                    <div class="btn-group ms-2">
+                                                                        <a asp-action="Details" asp-route-id="@record.Id" 
+                                                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                                                            <i class="fas fa-eye"></i>
+                                                                        </a>
+                                                                        @if (User.IsInRole("Administrator") || (User.Identity?.Name == record.Doctor?.Email))
+                                                                        {
+                                                                            <a asp-action="Edit" asp-route-id="@record.Id" 
+                                                                               class="btn btn-sm btn-outline-warning" title="Edit">
+                                                                                <i class="fas fa-edit"></i>
+                                                                            </a>
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                @if (!string.IsNullOrEmpty(record.Notes))
+                                                                {
+                                                                    <div class="mb-2">
+                                                                        <span class="field-label">Notes:</span>
+                                                                        <p class="mb-1">@Html.Raw(SafeHtml(record.Notes))</p>
+                                                                    </div>
+                                                                }
+                                                                
+                                                                @if (!string.IsNullOrEmpty(record.TreatmentPlan))
+                                                                {
+                                                                    <div class="mb-2">
+                                                                        <span class="field-label">Treatment Plan:</span>
+                                                                        <p class="mb-1">@Html.Raw(SafeHtml(record.TreatmentPlan))</p>
+                                                                    </div>
+                                                                }
+                                                                
+                                                                @if (!string.IsNullOrEmpty(record.Allergies))
+                                                                {
+                                                                    <div class="mb-2">
+                                                                        <span class="field-label">Allergies:</span>
+                                                                        <span class="text-warning">@record.Allergies</span>
+                                                                    </div>
+                                                                }
+                                                                
+                                                                @if (!string.IsNullOrEmpty(record.Medications))
+                                                                {
+                                                                    <div class="mb-2">
+                                                                        <span class="field-label">Medications:</span>
+                                                                        <p class="mb-1">@Html.Raw(SafeHtml(record.Medications))</p>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (timelineItem.Type == "Appointment" && timelineItem.Appointment != null)
+                                            {
+                                                var appointment = timelineItem.Appointment;
+                                                <div class="row">
+                                                    <div class="col-md-2">
+                                                        <div class="timeline-badge bg-success">
+                                                            <i class="fas fa-calendar-check"></i>
+                                                        </div>
+                                                        <div class="timeline-date">
+                                                            @appointment.AppointmentDateTime.ToString("MM/dd/yyyy")
+                                                            <br><small>@appointment.AppointmentDateTime.ToString("hh:mm tt")</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-10">
+                                                        <div class="card">
+                                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                                <h6 class="mb-0">
+                                                                    <i class="fas fa-calendar-check text-success me-2"></i>
+                                                                    Appointment - @(appointment.Service?.Name ?? "Unknown Service")
+                                                                </h6>
+                                                                <div>
+                                                                    <small class="text-muted">with Dr. @(appointment.Doctor?.FirstName ?? "Unknown") @(appointment.Doctor?.LastName ?? "Doctor")</small>
+                                                                    <a asp-controller="Appointments" asp-action="Details" asp-route-id="@appointment.Id" 
+                                                                       class="btn btn-sm btn-outline-success ms-2" title="View Appointment">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <div class="row">
+                                                                    <div class="col-md-6">
+                                                                        <p class="mb-1"><span class="field-label">Service:</span> @(appointment.Service?.Name ?? "Unknown Service")</p>
+                                                                        <p class="mb-1"><span class="field-label">Duration:</span> @(appointment.Service?.DurationMinutes ?? 0) minutes</p>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <p class="mb-1"><span class="field-label">Status:</span> 
+                                                                            @switch (appointment.Status)
+                                                                            {
+                                                                                case DentalClinicWebApp.Models.AppointmentStatus.Scheduled:
+                                                                                    <span class="badge bg-primary">Scheduled</span>
+                                                                                    break;
+                                                                                case DentalClinicWebApp.Models.AppointmentStatus.Confirmed:
+                                                                                    <span class="badge bg-success">Confirmed</span>
+                                                                                    break;
+                                                                                case DentalClinicWebApp.Models.AppointmentStatus.Completed:
+                                                                                    <span class="badge bg-success">Completed</span>
+                                                                                    break;
+                                                                                case DentalClinicWebApp.Models.AppointmentStatus.Cancelled:
+                                                                                    <span class="badge bg-danger">Cancelled</span>
+                                                                                    break;
+                                                                                case DentalClinicWebApp.Models.AppointmentStatus.NoShow:
+                                                                                    <span class="badge bg-warning">No Show</span>
+                                                                                    break;
+                                                                            }
+                                                                        </p>
+                                                                        <p class="mb-1"><span class="field-label">Price:</span> $@(appointment.Service?.Price.ToString("F2") ?? "0.00")</p>
+                                                                    </div>
+                                                                </div>
+                                                                @if (!string.IsNullOrEmpty(appointment.Notes))
+                                                                {
+                                                                    <div class="mt-2">
+                                                                        <span class="field-label">Notes:</span>
+                                                                        <p class="mb-0">@appointment.Notes</p>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Medical History</h5>
+                                    <p class="text-muted">There are no medical records or appointments for this patient yet.</p>
+                                    @if (User.IsInRole("Doctor") || User.IsInRole("DentalHygienist") || User.IsInRole("Administrator"))
+                                    {
+                                        <a asp-action="Create" asp-route-patientId="@Model.Patient.Id" class="btn btn-primary">
+                                            <i class="fas fa-plus me-1"></i>Create First Record
+                                        </a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+        }
+        
+        .timeline-item {
+            position: relative;
+        }
+        
+        .timeline-badge {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2em;
+            margin: 0 auto 10px;
+        }
+        
+        .timeline-date {
+            text-align: center;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        .field-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .summary-content {
+            line-height: 1.6;
+        }
+        
+        .summary-content ul {
+            margin-left: 1.2rem;
+        }
+        
+        @@media (min-width: 768px) {
+            .timeline::before {
+                content: '';
+                position: absolute;
+                left: 91px;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: #dee2e6;
+            }
+            
+            .timeline-item:not(:last-child) .timeline-badge::after {
+                content: '';
+                position: absolute;
+                top: 50px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 2px;
+                height: 40px;
+                background: #dee2e6;
+            }
+        }
+    </style>
+}

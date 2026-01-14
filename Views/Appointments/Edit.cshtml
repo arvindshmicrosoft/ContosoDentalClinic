@@ -1,0 +1,518 @@
+@model DentalClinicWebApp.Models.Appointment
+
+@{
+    ViewData["Title"] = "Edit Appointment";
+    
+    // Function to get next available weekday
+    DateTime GetNextWeekday(DateTime date)
+    {
+        do
+        {
+            date = date.AddDays(1);
+        }
+        while (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday);
+        
+        return date;
+    }
+    
+    var nextWeekday = GetNextWeekday(DateTime.Today);
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="Edit" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            
+            <input type="hidden" asp-for="Id" />
+            
+            <div class="form-group mb-3">
+                <label for="PatientId" class="form-label">Patient *</label>
+                @if (ViewBag.CurrentUserRoles != null && (((IList<string>)ViewBag.CurrentUserRoles).Contains("Administrator") || ((IList<string>)ViewBag.CurrentUserRoles).Contains("FrontOffice")))
+                {
+                    <select asp-for="PatientId" class="form-select" required title="Select the patient for this appointment" aria-label="Patient selection">
+                        <option value="">Select a patient...</option>
+                        @if (ViewBag.Patients != null)
+                        {
+                            @foreach (var patient in (IEnumerable<DentalClinicWebApp.Models.ApplicationUser>)ViewBag.Patients)
+                            {
+                                <option value="@patient.Id">@patient.FirstName @patient.LastName (@patient.Email)</option>
+                            }
+                        }
+                    </select>
+                }
+                else
+                {
+                    @if (ViewBag.Patients != null)
+                    {
+                        var selectedPatient = ((IEnumerable<DentalClinicWebApp.Models.ApplicationUser>)ViewBag.Patients).FirstOrDefault(p => p.Id == Model.PatientId);
+                        <input type="text" class="form-control" value="@(selectedPatient?.FirstName) @(selectedPatient?.LastName) (@(selectedPatient?.Email))" readonly />
+                        <input type="hidden" asp-for="PatientId" />
+                    }
+                }
+                <span asp-validation-for="PatientId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="DoctorId" class="form-label">Doctor *</label>
+                <select asp-for="DoctorId" class="form-select" required title="Select the doctor for this appointment" aria-label="Doctor selection">
+                    <option value="">Select a doctor...</option>
+                    @if (ViewBag.Doctors != null)
+                    {
+                        @foreach (var doctor in (IEnumerable<DentalClinicWebApp.Models.ApplicationUser>)ViewBag.Doctors)
+                        {
+                            <option value="@doctor.Id">Dr. @doctor.FirstName @doctor.LastName</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="DoctorId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="ServiceId" class="form-label">Service *</label>
+                <select asp-for="ServiceId" class="form-select" required title="Select the dental service for this appointment" aria-label="Service selection">
+                    <option value="">Select a service...</option>
+                    @if (ViewBag.Services != null)
+                    {
+                        @foreach (var service in (IEnumerable<DentalClinicWebApp.Models.Service>)ViewBag.Services)
+                        {
+                            <option value="@service.Id">@service.Name - $@service.Price.ToString("F2") (@service.DurationMinutes min)</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="ServiceId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="AppointmentDate" class="form-label">Appointment Date *</label>
+                <div class="enhanced-date-input">
+                    <input type="date" id="appointmentDate" class="form-control" required 
+                           min="@nextWeekday.ToString("yyyy-MM-dd")" 
+                           max="@DateTime.Today.AddDays(90).ToString("yyyy-MM-dd")"
+                           value="@Model.AppointmentDateTime.ToString("yyyy-MM-dd")"
+                           title="Select appointment date (up to 90 days in advance)"
+                           aria-describedby="dateHelp" />
+                    <span class="weekend-indicator" id="weekendIndicator">⚠ Weekend</span>
+                </div>
+                <div id="dateHelp" class="form-text">Please select a weekday for your appointment (Monday-Friday, up to 90 days in advance).</div>
+                <div class="invalid-date-warning" id="weekendWarning">
+                    <i class="fa fa-exclamation-triangle"></i> Appointments are only available on weekdays (Monday-Friday). Please select a different date.
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="AppointmentTime" class="form-label">Appointment Time *</label>
+                <select id="appointmentTime" class="form-select" required title="Select appointment time" aria-describedby="timeHelp">
+                    <option value="">First select a date</option>
+                </select>
+                <div id="timeHelp" class="form-text">Available time slots will appear once you select a date.</div>
+                <input type="hidden" asp-for="AppointmentDateTime" id="appointmentDateTime" />
+                <span asp-validation-for="AppointmentDateTime" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="Status" class="form-label">Status *</label>
+                @if (ViewBag.CurrentUserRoles != null && ((IList<string>)ViewBag.CurrentUserRoles).Contains("Patient"))
+                {
+                    string statusText = Model.Status switch
+                    {
+                        DentalClinicWebApp.Models.AppointmentStatus.Scheduled => "Scheduled",
+                        DentalClinicWebApp.Models.AppointmentStatus.Confirmed => "Confirmed",
+                        DentalClinicWebApp.Models.AppointmentStatus.InProgress => "In Progress",
+                        DentalClinicWebApp.Models.AppointmentStatus.Completed => "Completed",
+                        DentalClinicWebApp.Models.AppointmentStatus.Cancelled => "Cancelled",
+                        DentalClinicWebApp.Models.AppointmentStatus.NoShow => "No Show",
+                        _ => "Unknown"
+                    };
+                    <input type="text" class="form-control" value="@statusText" readonly />
+                    <input type="hidden" asp-for="Status" />
+                    <div class="form-text">
+                        <i class="fa fa-info-circle"></i> Patients cannot modify appointment status.
+                    </div>
+                }
+                else
+                {
+                    <select asp-for="Status" class="form-select" required title="Select the appointment status" aria-label="Status selection">
+                        <option value="@((int)DentalClinicWebApp.Models.AppointmentStatus.Scheduled)">Scheduled</option>
+                        <option value="@((int)DentalClinicWebApp.Models.AppointmentStatus.Confirmed)">Confirmed</option>
+                        <option value="@((int)DentalClinicWebApp.Models.AppointmentStatus.InProgress)">In Progress</option>
+                        <option value="@((int)DentalClinicWebApp.Models.AppointmentStatus.Completed)">Completed</option>
+                        <option value="@((int)DentalClinicWebApp.Models.AppointmentStatus.Cancelled)">Cancelled</option>
+                        <option value="@((int)DentalClinicWebApp.Models.AppointmentStatus.NoShow)">No Show</option>
+                    </select>
+                }
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="Notes" class="form-label">Notes</label>
+                <textarea asp-for="Notes" class="form-control" rows="3" 
+                          title="Optional notes about this appointment" placeholder="Enter any special notes or requirements..."></textarea>
+                <span asp-validation-for="Notes" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-save"></i> Update Appointment
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Back to Appointments
+                </a>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                    <i class="fa fa-eye"></i> View Details
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fa fa-info-circle"></i> Appointment Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><i class="fa fa-clock text-primary"></i> <strong>Office Hours:</strong> Monday-Friday, 9:00 AM - 5:00 PM</li>
+                    <li><i class="fa fa-calendar text-primary"></i> <strong>Booking:</strong> Appointments must be scheduled for future dates</li>
+                    <li><i class="fa fa-user-md text-primary"></i> <strong>Doctors:</strong> Select from our available dental professionals</li>
+                    <li><i class="fa fa-tooth text-primary"></i> <strong>Services:</strong> Choose the appropriate dental service</li>
+                    <li><i class="fa fa-exclamation-triangle text-warning"></i> 
+                        <strong>Changes:</strong> 
+                        @if (ViewBag.CurrentUserRoles != null && ((IList<string>)ViewBag.CurrentUserRoles).Contains("Patient"))
+                        {
+                            <span>You can reschedule, change doctor, or change service type</span>
+                        }
+                        else
+                        {
+                            <span>Staff can modify all appointment details</span>
+                        }
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        // Doctor and date selection handling for time slots
+        function loadAvailableTimeSlots() {
+            const doctorSelect = document.querySelector('select[name="DoctorId"]');
+            const serviceSelect = document.querySelector('select[name="ServiceId"]');
+            const dateInput = document.getElementById('appointmentDate');
+            const timeSlotSelect = document.getElementById('appointmentTime');
+            
+            const doctorId = doctorSelect?.value;
+            const serviceId = serviceSelect?.value;
+            const selectedDate = dateInput?.value;
+            
+            if (!doctorId || !serviceId || !selectedDate) {
+                timeSlotSelect.disabled = true;
+                timeSlotSelect.innerHTML = '<option value="">Please select doctor, service, and date</option>';
+                return;
+            }
+            
+            // Show loading state
+            timeSlotSelect.disabled = true;
+            timeSlotSelect.innerHTML = '<option value="">Loading available times...</option>';
+            
+            // Fetch available time slots with service duration consideration
+            fetch(`/Appointments/GetAvailableTimeSlots?doctorId=${encodeURIComponent(doctorId)}&serviceId=${encodeURIComponent(serviceId)}&date=${encodeURIComponent(selectedDate)}`)
+                .then(response => response.json())
+                .then(data => {
+                    timeSlotSelect.innerHTML = '';
+                    
+                    if (data.success && data.slots && data.slots.length > 0) {
+                        timeSlotSelect.innerHTML = '<option value="">Select a time slot</option>';
+                        data.slots.forEach(slot => {
+                            const option = new Option(slot.display, slot.time);
+                            timeSlotSelect.add(option);
+                        });
+                        timeSlotSelect.disabled = false;
+                        
+                        // Pre-select current appointment time if it exists in the list
+                        const currentDateTime = new Date('@Model.AppointmentDateTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+                        const currentTime = currentDateTime.toTimeString().substring(0, 5); // HH:MM format
+                        const currentOption = timeSlotSelect.querySelector(`option[value="${currentTime}"]`);
+                        if (currentOption) {
+                            currentOption.selected = true;
+                            // Update hidden field
+                            updateHiddenDateTime();
+                        }
+                    } else if (!data.success && data.message) {
+                        timeSlotSelect.innerHTML = `<option value="">${data.message}</option>`;
+                        // If editing and current slot not available, add it as an option
+                        addCurrentAppointmentTimeOption();
+                    } else {
+                        timeSlotSelect.innerHTML = '<option value="">No available slots for this date</option>';
+                        // If editing and no slots available, add current time as option
+                        addCurrentAppointmentTimeOption();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading time slots:', error);
+                    timeSlotSelect.innerHTML = '<option value="">Error loading time slots</option>';
+                    // If error loading slots, add current time as option
+                    addCurrentAppointmentTimeOption();
+                });
+        }
+        
+        function addCurrentAppointmentTimeOption() {
+            const timeSlotSelect = document.getElementById('appointmentTime');
+            const currentDateTime = new Date('@Model.AppointmentDateTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+            const currentTime = currentDateTime.toTimeString().substring(0, 5); // HH:MM format
+            const currentDisplayTime = currentDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // Add current appointment time as an option
+            const currentOption = new Option(`${currentDisplayTime} (Current)`, currentTime);
+            timeSlotSelect.add(currentOption);
+            currentOption.selected = true;
+            timeSlotSelect.disabled = false;
+            updateHiddenDateTime();
+        }
+        
+        function updateHiddenDateTime() {
+            const selectedTime = document.getElementById('appointmentTime').value;
+            const selectedDate = document.getElementById('appointmentDate').value;
+            const hiddenDateTime = document.getElementById('appointmentDateTime');
+            
+            if (selectedTime && selectedDate) {
+                // Combine date and time to create proper datetime
+                const combinedDateTime = selectedDate + 'T' + selectedTime + ':00';
+                hiddenDateTime.value = combinedDateTime;
+                console.log('Selected DateTime:', combinedDateTime);
+            } else {
+                hiddenDateTime.value = '';
+            }
+        }
+        
+        // Add event listeners when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const doctorSelect = document.querySelector('select[name="DoctorId"]');
+            const dateInput = document.getElementById('appointmentDate');
+            const timeSlotSelect = document.getElementById('appointmentTime');
+            const hiddenDateTime = document.getElementById('appointmentDateTime');
+            const serviceSelect = document.querySelector('select[name="ServiceId"]');
+            
+            // Disable weekend dates in the date picker
+            function disableWeekends() {
+                if (dateInput) {
+                    // Function to check if a date is a weekend
+                    function isWeekend(dateString) {
+                        if (!dateString) return false;
+                        const date = new Date(dateString + 'T00:00:00');
+                        const dayOfWeek = date.getDay();
+                        return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+                    }
+                    
+                    // Function to show/hide weekend warning
+                    function updateWeekendIndicator(isWeekendDate) {
+                        const weekendIndicator = document.getElementById('weekendIndicator');
+                        const weekendWarning = document.getElementById('weekendWarning');
+                        
+                        if (isWeekendDate) {
+                            weekendIndicator.style.display = 'block';
+                            weekendWarning.style.display = 'block';
+                            dateInput.style.borderColor = '#dc3545';
+                            dateInput.style.backgroundColor = '#f8d7da';
+                        } else {
+                            weekendIndicator.style.display = 'none';
+                            weekendWarning.style.display = 'none';
+                            dateInput.style.borderColor = '';
+                            dateInput.style.backgroundColor = '';
+                        }
+                    }
+                    
+                    // Listen for date changes
+                    dateInput.addEventListener('input', function() {
+                        const selectedValue = this.value;
+                        
+                        if (selectedValue && isWeekend(selectedValue)) {
+                            updateWeekendIndicator(true);
+                            timeSlotSelect.innerHTML = '<option value="">Please select a weekday</option>';
+                            timeSlotSelect.disabled = true;
+                            hiddenDateTime.value = '';
+                            
+                            // Auto-clear the invalid date after a short delay
+                            setTimeout(() => {
+                                if (this.value === selectedValue && isWeekend(this.value)) {
+                                    this.value = '@Model.AppointmentDateTime.ToString("yyyy-MM-dd")'; // Reset to current appointment date
+                                    updateWeekendIndicator(false);
+                                    alert('Appointments are only available on weekdays (Monday-Friday). Please select a weekday.');
+                                }
+                            }, 1500);
+                        } else {
+                            updateWeekendIndicator(false);
+                        }
+                    });
+                    
+                    // Listen for change events (when user selects from calendar)
+                    dateInput.addEventListener('change', function() {
+                        const selectedValue = this.value;
+                        
+                        if (selectedValue && isWeekend(selectedValue)) {
+                            updateWeekendIndicator(true);
+                            
+                            // Immediately clear and show alert
+                            setTimeout(() => {
+                                this.value = '@Model.AppointmentDateTime.ToString("yyyy-MM-dd")'; // Reset to current appointment date
+                                updateWeekendIndicator(false);
+                                alert('Appointments are only available on weekdays (Monday-Friday). Please select a weekday.');
+                                timeSlotSelect.innerHTML = '<option value="">Please select a weekday</option>';
+                                timeSlotSelect.disabled = true;
+                                hiddenDateTime.value = '';
+                            }, 100);
+                        }
+                    });
+                    
+                    // Prevent form submission with weekend dates
+                    const form = document.querySelector('form');
+                    if (form) {
+                        form.addEventListener('submit', function(e) {
+                            if (dateInput.value && isWeekend(dateInput.value)) {
+                                e.preventDefault();
+                                alert('Please select a weekday (Monday-Friday) for your appointment.');
+                                dateInput.focus();
+                                return false;
+                            }
+                        });
+                    }
+                }
+            }
+            
+            // Initialize weekend restrictions
+            disableWeekends();
+            
+            // Initialize with current appointment time
+            const currentDateTime = new Date('@Model.AppointmentDateTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+            updateHiddenDateTime();
+            
+            if (doctorSelect) {
+                doctorSelect.addEventListener('change', function() {
+                    // Clear the hidden datetime field when doctor changes
+                    hiddenDateTime.value = '';
+                    loadAvailableTimeSlots();
+                });
+            }
+            
+            if (serviceSelect) {
+                serviceSelect.addEventListener('change', function() {
+                    // Clear the hidden datetime field when service changes
+                    hiddenDateTime.value = '';
+                    
+                    // Reload time slots when service changes
+                    loadAvailableTimeSlots();
+                });
+            }
+            
+            if (dateInput) {
+                dateInput.addEventListener('change', function() {
+                    const selectedDate = new Date(dateInput.value + 'T00:00:00');
+                    const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 6 = Saturday
+                    
+                    // Clear the hidden datetime field when date changes
+                    hiddenDateTime.value = '';
+                    
+                    if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        alert('Appointments are only available on weekdays (Monday-Friday). Please select a weekday.');
+                        dateInput.value = '@Model.AppointmentDateTime.ToString("yyyy-MM-dd")'; // Reset to current appointment date
+                        timeSlotSelect.innerHTML = '<option value="">First select a weekday</option>';
+                        timeSlotSelect.disabled = true;
+                        return;
+                    }
+                    
+                    loadAvailableTimeSlots();
+                });
+            }
+            
+            // Handle time slot selection to update hidden field
+            if (timeSlotSelect) {
+                timeSlotSelect.addEventListener('change', function() {
+                    updateHiddenDateTime();
+                });
+            }
+            
+            // Initial load of time slots for current appointment
+            loadAvailableTimeSlots();
+        });
+
+        // Form submission validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const hiddenDateTime = document.getElementById('appointmentDateTime');
+            const timeSlotSelect = document.getElementById('appointmentTime');
+            
+            if (!hiddenDateTime.value || !timeSlotSelect.value) {
+                e.preventDefault();
+                alert('Please select an available time slot for your appointment.');
+                return false;
+            }
+            
+            console.log('Submitting appointment with DateTime:', hiddenDateTime.value);
+        });
+    </script>
+}
+
+@section Styles {
+    <style>
+        /* Visual enhancement for form fields */
+        .form-control:focus, .form-select:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Disabled time slot styling */
+        #appointmentTime:disabled {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        /* Weekend date warning */
+        .weekend-warning {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        /* Edit mode specific styling */
+        .current-appointment-time {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        /* Enhanced date input styling */
+        .enhanced-date-input {
+            position: relative;
+        }
+        
+        .enhanced-date-input input[type="date"] {
+            width: 100%;
+        }
+        
+        /* Weekend indicator */
+        .weekend-indicator {
+            position: absolute;
+            right: 35px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #dc3545;
+            font-size: 0.75rem;
+            display: none;
+            pointer-events: none;
+        }
+        
+        /* Style for invalid date warning */
+        .invalid-date-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+    </style>
+}

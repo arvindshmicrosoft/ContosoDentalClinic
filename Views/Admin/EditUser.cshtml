@@ -1,0 +1,207 @@
+@model DentalClinicWebApp.Models.ApplicationUser
+@using Microsoft.AspNetCore.Identity
+@{
+    ViewData["Title"] = "Edit User";
+    var userRoles = ViewBag.UserRoles as IList<string> ?? new List<string>();
+    var allRoles = ViewBag.AllRoles as List<IdentityRole> ?? new List<IdentityRole>();
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2 class="mb-4">Edit User Information</h2>
+            
+            @if (TempData["Message"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Message"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <div class="mb-3">
+                <a asp-action="ManageUsers" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to User Management
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit: @Model.FirstName @Model.LastName</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="EditUser" method="post">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="firstName" class="form-label">First Name *</label>
+                                    <input type="text" class="form-control" id="firstName" name="firstName" value="@Model.FirstName" required maxlength="100">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="lastName" class="form-label">Last Name *</label>
+                                    <input type="text" class="form-control" id="lastName" name="lastName" value="@Model.LastName" required maxlength="100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                                    <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" value="@Model.DateOfBirth.ToString("yyyy-MM-dd")">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="gender" class="form-label">Gender</label>
+                                    <select class="form-control" id="gender" name="gender">
+                                        <option value="">Select Gender</option>
+                                        @if (Model.Gender == "Male")
+                                        {
+                                            <option value="Male" selected>Male</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="Male">Male</option>
+                                        }
+                                        @if (Model.Gender == "Female")
+                                        {
+                                            <option value="Female" selected>Female</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="Female">Female</option>
+                                        }
+                                        @if (Model.Gender == "Other")
+                                        {
+                                            <option value="Other" selected>Other</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="Other">Other</option>
+                                        }
+                                        @if (Model.Gender == "Prefer not to say")
+                                        {
+                                            <option value="Prefer not to say" selected>Prefer not to say</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="Prefer not to say">Prefer not to say</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email (Read Only)</label>
+                            <input type="email" class="form-control" id="email" value="@Model.Email" readonly>
+                            <div class="form-text">Email cannot be changed through this interface.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phoneNumber" name="phoneNumber" value="@Model.PhoneNumber">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="2" maxlength="200">@Model.Address</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Current Roles</label>
+                            <div class="border rounded p-3 bg-light">
+                                @if (userRoles.Any())
+                                {
+                                    foreach (var role in userRoles)
+                                    {
+                                        <span class="badge bg-primary me-2 mb-1">@role</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No roles assigned</span>
+                                }
+                            </div>
+                            <div class="form-text">
+                                Use the <a asp-action="UserInfo">User Info</a> page to manage user roles.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Account Information</label>
+                            <div class="border rounded p-3 bg-light">
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <strong>Created:</strong> @Model.CreatedDate.ToString("MM/dd/yyyy hh:mm tt")
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <strong>Status:</strong> 
+                                        @if (Model.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Inactive</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="ManageUsers" class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update User Information
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Form validation
+        document.getElementById('firstName').addEventListener('blur', function() {
+            if (this.value.trim().length === 0) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        document.getElementById('lastName').addEventListener('blur', function() {
+            if (this.value.trim().length === 0) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    </script>
+}

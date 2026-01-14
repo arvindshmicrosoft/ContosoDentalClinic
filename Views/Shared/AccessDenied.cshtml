@@ -1,0 +1,32 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card mt-5">
+            <div class="card-body text-center">
+                <div class="text-danger mb-4">
+                    <i class="fa fa-exclamation-triangle fa-4x"></i>
+                </div>
+                <h3 class="card-title text-danger">Access Denied</h3>
+                <p class="card-text mb-4">
+                    You don't have permission to access this resource. This could be because:
+                </p>
+                <ul class="list-unstyled text-start">
+                    <li><i class="fa fa-check-circle text-muted"></i> You need to be logged in with appropriate permissions</li>
+                    <li><i class="fa fa-check-circle text-muted"></i> This resource belongs to another user</li>
+                    <li><i class="fa fa-check-circle text-muted"></i> Your account role doesn't allow this action</li>
+                </ul>
+                <div class="mt-4">
+                    <a href="javascript:history.back()" class="btn btn-secondary me-2">
+                        <i class="fa fa-arrow-left"></i> Go Back
+                    </a>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                        <i class="fa fa-home"></i> Home Page
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

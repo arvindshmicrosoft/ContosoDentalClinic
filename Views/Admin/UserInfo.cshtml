@@ -1,0 +1,324 @@
+@using DentalClinicWebApp.Models
+@{
+    ViewData["Title"] = "User Information & Role Management";
+    var user = ViewBag.User as ApplicationUser;
+    var roles = ViewBag.Roles as IList<string>;
+    var allRoles = ViewBag.AllRoles as IList<Microsoft.AspNetCore.Identity.IdentityRole>;
+    var isAdmin = ViewBag.IsAdmin as bool?;
+    var allUsers = ViewBag.AllUsers as List<(ApplicationUser User, IList<string> Roles)>;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user"></i>
+                        User Information & Role Management
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @TempData["Message"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (user != null)
+                    {
+                        <h5>Current User Details</h5>
+                        <table class="table table-striped">
+                            <tr>
+                                <td><strong>Name:</strong></td>
+                                <td>@user.FirstName @user.LastName</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>@user.Email</td>
+                            </tr>
+                            <tr>
+                                <td><strong>User ID:</strong></td>
+                                <td>@user.Id</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Current Roles:</strong></td>
+                                <td>
+                                    @if (roles != null && roles.Any())
+                                    {
+                                        foreach (var role in roles)
+                                        {
+                                            <span class="badge bg-primary me-1">@role</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No roles assigned</span>
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+
+                        @* Check for potential role session inconsistencies *@
+                        @if (User.IsInRole("Administrator") && (roles == null || !roles.Contains("Administrator")))
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Role Update Detected:</strong> Your session may have outdated role information.
+                                <br>
+                                <div class="mt-2">
+                                    <a href="@Url.Action("RefreshSession", "Admin")" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-sync"></i> Refresh Session
+                                    </a>
+                                    <span class="text-muted">or</span>
+                                    <a href="/Account/Logout" class="alert-link">log out and log back in</a>
+                                </div>
+                            </div>
+                        }
+
+                        <hr />
+                        @* Double-check admin status using both ViewBag and direct role check *@
+                        @if (isAdmin == true && (roles != null && roles.Contains("Administrator")))
+                        {
+                            <h5>Administrator Role Management</h5>
+                            <p class="text-muted">As an administrator, you can assign and remove roles for all users:</p>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    @using (Html.BeginForm("AssignRole", "Admin", FormMethod.Post))
+                                    {
+                                        <input type="hidden" name="roleName" value="Patient" />
+                                        <button type="submit" class="btn btn-outline-primary btn-sm mb-2 w-100">
+                                            <i class="fas fa-user"></i> Assign Patient Role (Self)
+                                        </button>
+                                    }
+                                    
+                                    @using (Html.BeginForm("AssignRole", "Admin", FormMethod.Post))
+                                    {
+                                        <input type="hidden" name="roleName" value="Doctor" />
+                                        <button type="submit" class="btn btn-outline-success btn-sm mb-2 w-100">
+                                            <i class="fas fa-user-md"></i> Assign Doctor Role (Self)
+                                        </button>
+                                    }
+                                    
+                                    @using (Html.BeginForm("AssignRole", "Admin", FormMethod.Post))
+                                    {
+                                        <input type="hidden" name="roleName" value="FrontOffice" />
+                                        <button type="submit" class="btn btn-outline-info btn-sm mb-2 w-100">
+                                            <i class="fas fa-desk"></i> Assign Front Office Role (Self)
+                                        </button>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    @using (Html.BeginForm("AssignRole", "Admin", FormMethod.Post))
+                                    {
+                                        <input type="hidden" name="roleName" value="DentalHygienist" />
+                                        <button type="submit" class="btn btn-outline-warning btn-sm mb-2 w-100">
+                                            <i class="fas fa-tooth"></i> Assign Dental Hygienist Role (Self)
+                                        </button>
+                                    }
+                                    
+                                    @using (Html.BeginForm("CleanupAdminRoles", "Admin", FormMethod.Post))
+                                    {
+                                        <button type="submit" class="btn btn-outline-danger btn-sm mb-2 w-100" 
+                                                onclick="return confirm('This will remove Administrator role from all users except the default admin. Continue?')">
+                                            <i class="fas fa-broom"></i> Cleanup Admin Roles
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <hr />
+                            <div class="mb-3">
+                                <h5>User Management Tools</h5>
+                                <p class="text-muted">Access comprehensive user management features:</p>
+                                <a asp-action="ManageUsers" class="btn btn-primary">
+                                    <i class="fas fa-users-cog"></i> Manage All Users
+                                </a>
+                                <small class="form-text text-muted d-block mt-2">
+                                    View, edit, and manage detailed information for all registered users.
+                                </small>
+                            </div>
+
+                            @if (allUsers != null && allUsers.Any())
+                            {
+                                <hr />
+                                <h5>Quick Role Management</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Email</th>
+                                                <th>Current Roles</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var userWithRoles in allUsers)
+                                            {
+                                                <tr>
+                                                    <td>@userWithRoles.User.FirstName @userWithRoles.User.LastName</td>
+                                                    <td>@userWithRoles.User.Email</td>
+                                                    <td>
+                                                        @if (userWithRoles.Roles.Any())
+                                                        {
+                                                            foreach (var role in userWithRoles.Roles)
+                                                            {
+                                                                <span class="badge bg-secondary me-1">@role</span>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">No roles</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                                                Assign Role
+                                                            </button>
+                                                            <ul class="dropdown-menu">
+                                                                @if (allRoles != null)
+                                                                {
+                                                                    @foreach (var role in allRoles)
+                                                                    {
+                                                                        @if (role.Name != null && !userWithRoles.Roles.Contains(role.Name))
+                                                                        {
+                                                                            <li>
+                                                                                <form method="post" asp-action="AssignRoleToUser" style="display: inline;">
+                                                                                    <input type="hidden" name="userId" value="@userWithRoles.User.Id" />
+                                                                                    <input type="hidden" name="roleName" value="@role.Name" />
+                                                                                    <button type="submit" class="dropdown-item">
+                                                                                        <i class="fas fa-plus-circle"></i> @role.Name
+                                                                                    </button>
+                                                                                </form>
+                                                                            </li>
+                                                                        }
+                                                                    }
+                                                                }
+                                                            </ul>
+                                                        </div>
+                                                        
+                                                        @if (userWithRoles.Roles.Any())
+                                                        {
+                                                            <div class="btn-group ms-1" role="group">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown">
+                                                                    Remove Role
+                                                                </button>
+                                                                <ul class="dropdown-menu">
+                                                                    @foreach (var role in userWithRoles.Roles)
+                                                                    {
+                                                                        <li>
+                                                                            <form method="post" asp-action="RemoveRoleFromUser" style="display: inline;">
+                                                                                <input type="hidden" name="userId" value="@userWithRoles.User.Id" />
+                                                                                <input type="hidden" name="roleName" value="@role" />
+                                                                                <button type="submit" class="dropdown-item" 
+                                                                                        @(role == "Administrator" && userWithRoles.User.Email == "admin@contosodentalclinic.com" ? "disabled" : "")
+                                                                                        onclick="return confirm('Remove @role role from @userWithRoles.User.FirstName @userWithRoles.User.LastName?')">
+                                                                                    <i class="fas fa-minus-circle"></i> @role
+                                                                                    @if (role == "Administrator" && userWithRoles.User.Email == "admin@contosodentalclinic.com")
+                                                                                    {
+                                                                                        <small>(Protected)</small>
+                                                                                    }
+                                                                                </button>
+                                                                            </form>
+                                                                        </li>
+                                                                    }
+                                                                </ul>
+                                                            </div>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <h5>Role Assignment</h5>
+                            <p class="text-muted">You can assign yourself the Patient role to access appointment features:</p>
+                            
+                            @using (Html.BeginForm("AssignRole", "Admin", FormMethod.Post))
+                            {
+                                <input type="hidden" name="roleName" value="Patient" />
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fas fa-user"></i> Assign Patient Role
+                                </button>
+                            }
+
+                            <div class="alert alert-info mt-3">
+                                <strong>Note:</strong> Only administrators can assign other types of roles. If you need different roles, please contact an administrator.
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="card-footer">
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                    <a href="@Url.Action("Create", "Appointments")" class="btn btn-primary">
+                        <i class="fas fa-calendar-plus"></i> Create Appointment
+                    </a>
+                    <a href="@Url.Action("Index", "Appointments")" class="btn btn-success">
+                        <i class="fas fa-calendar"></i> View Appointments
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        @if (isAdmin == true && (roles != null && roles.Contains("Administrator")))
+        {
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Available Roles</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (allRoles != null)
+                        {
+                            <ul class="list-unstyled">
+                                @foreach (var role in allRoles)
+                                {
+                                    <li class="mb-1">
+                                        <span class="badge bg-secondary">@role.Name</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-shield-alt"></i> Security Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success">
+                            <strong>Administrator Access</strong><br>
+                            You have full role management privileges and can assign/remove roles for all users.
+                        </div>
+                        <ul class="small">
+                            <li>Assign roles to any user</li>
+                            <li>Remove roles from any user</li>
+                            <li>Clean up unauthorized admin roles</li>
+                            <li>Default admin account is protected</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,163 @@
+﻿@{
+    ViewData["Title"] = "Welcome to Contoso University Dental Clinic";
+}
+
+@if (ViewBag.ShowRoleAssignmentNotice == true)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading">Welcome @ViewBag.UserName!</h4>
+        <p>Your account has been created, but you need to assign yourself a role to access clinic features.</p>
+        <hr>
+        <p class="mb-0">
+            <strong>For Patients:</strong> 
+            <a href="@Url.Action("AssignPatientRole", "Admin")" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-user"></i> Assign Patient Role
+            </a>
+        </p>
+        <p class="mb-0 mt-2">
+            <strong>For Staff:</strong> 
+            @if (User.IsInRole("Administrator"))
+            {
+                <a href="@Url.Action("UserInfo", "Admin")" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-cog"></i> Choose Staff Role
+                </a>
+            }
+            else
+            {
+                <span class="text-muted">Contact administrator for role assignment</span>
+            }
+        </p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="text-center">
+    <h1 class="display-4 text-primary">Welcome to Contoso University Dental Clinic</h1>
+    <p class="lead">Your trusted partner for comprehensive dental care and oral health.</p>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fa fa-calendar fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Schedule Appointments</h5>
+                <p class="card-text">Book your dental appointments online with our easy-to-use scheduling system.</p>
+                @if (User.Identity!.IsAuthenticated)
+                {
+                    <a asp-controller="Appointments" asp-action="Create" class="btn btn-primary">Schedule Now</a>
+                }
+                else
+                {
+                    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary">Login to Schedule</a>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fa fa-tooth fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Our Services</h5>
+                <p class="card-text">Explore our comprehensive range of dental services from cleanings to complex procedures.</p>
+                <a asp-controller="Services" asp-action="Index" class="btn btn-success">View Services</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fa fa-file-invoice-dollar fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Billing & Payments</h5>
+                <p class="card-text">View your invoices and make secure online payments for your dental treatments.</p>
+                @if (User.Identity!.IsAuthenticated)
+                {
+                    <a asp-controller="Invoices" asp-action="Index" class="btn btn-info">View Invoices</a>
+                }
+                else
+                {
+                    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-info">Login to View Bills</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fa fa-info-circle"></i> About Our Clinic</h5>
+            </div>
+            <div class="card-body">
+                <p>Contoso University Dental Clinic provides comprehensive dental care with state-of-the-art equipment and experienced professionals. We are committed to helping you maintain optimal oral health through preventive care and advanced treatment options.</p>
+                
+                <h6>Our Services Include:</h6>
+                <ul>
+                    <li>Comprehensive dental examinations with full-mouth X-rays</li>
+                    <li>Professional teeth cleaning and deep cleaning services</li>
+                    <li>Restorative dentistry including crowns, fillings, and partials</li>
+                    <li>Preventive care including night guards</li>
+                </ul>
+                
+                <p>Whether you need routine preventive care or complex dental work, our team is here to provide personalized treatment in a comfortable environment.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fa fa-clock"></i> Office Hours</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Monday - Friday:</strong></td>
+                        <td>8:00 AM - 6:00 PM</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Saturday:</strong></td>
+                        <td>9:00 AM - 2:00 PM</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sunday:</strong></td>
+                        <td>Closed</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fa fa-phone"></i> Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Phone:</strong> (555) 123-DENTAL<br>
+                <strong>Email:</strong> info@contosodental.edu<br>
+                <strong>Emergency:</strong> (555) 911-HELP</p>
+                
+                <p><strong>Address:</strong><br>
+                123 University Drive<br>
+                Dental Building, Suite 100<br>
+                University City, State 12345</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!User.Identity!.IsAuthenticated)
+{
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="alert alert-primary text-center">
+                <h5><i class="fa fa-user-plus"></i> New Patient?</h5>
+                <p>Register for an account to schedule appointments, view your treatment history, and manage your dental care online.</p>
+                <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-primary btn-lg">Register Now</a>
+                <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-outline-primary btn-lg ms-2">Patient Login</a>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,74 @@
+@model IEnumerable<DentalClinicWebApp.Models.Service>
+
+@{
+    ViewData["Title"] = "Dental Services";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="row mb-3">
+    <div class="col">
+        @if (User.IsInRole("Administrator"))
+        {
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Add New Service
+            </a>
+        }
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="row">
+        @foreach (var service in Model)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@service.Name</h5>
+                        @if (!string.IsNullOrEmpty(service.Description))
+                        {
+                            <p class="card-text">@service.Description</p>
+                        }
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-primary h5">$@service.Price.ToString("F2")</span>
+                                <small class="text-muted d-block">@service.DurationMinutes minutes</small>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <a asp-action="Details" asp-route-id="@service.Id" class="btn btn-sm btn-outline-info" title="View Details">
+                                    <i class="fa fa-eye"></i>
+                                </a>
+                                @if (User.IsInRole("Administrator"))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@service.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <i class="fa fa-edit"></i>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    @if (User.IsInRole("Patient") || User.IsInRole("FrontOffice") || User.IsInRole("Administrator"))
+                    {
+                        <div class="card-footer">
+                            <a asp-controller="Appointments" asp-action="Create" asp-route-serviceId="@service.Id" class="btn btn-success btn-sm w-100">
+                                <i class="fa fa-calendar-plus"></i> Schedule Appointment
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h5><i class="fa fa-info-circle"></i> No services available</h5>
+        <p>There are currently no dental services listed.</p>
+        @if (User.IsInRole("Administrator"))
+        {
+            <a asp-action="Create" class="btn btn-primary">Add the First Service</a>
+        }
+    </div>
+}
