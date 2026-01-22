@@ -54,23 +54,29 @@ A comprehensive web application for managing a university dental clinic, built w
 - .NET 9.0 SDK or later
 - SQL Server or SQL Server LocalDB
 - Visual Studio Code (recommended) or Visual Studio
+- Entity Framework Core tools (install globally):
+  ```bash
+  dotnet tool install --global dotnet-ef
+  ```
 
 ### Installation
 
 ```bash
-# 1. Navigate to project directory
-cd "Contoso University Dental Clinic"
+# 1. Navigate to the project directory (where DentalClinicWebApp.csproj is located)
+cd "path\to\Contoso University Dental Clinic"
 
 # 2. Restore NuGet packages
-dotnet restore
+dotnet restore DentalClinicWebApp.csproj
 
-# 3. Configure passwords in appsettings.json (see Configuration section)
+# 3. Build the project (required before running migrations)
+dotnet build DentalClinicWebApp.csproj
 
-# 4. Create and update the database
+# 4. Configure passwords in appsettings.json (see Configuration section)
+
+# 5. Create and update the database
 dotnet ef database update
 
-# 5. Build and run
-dotnet build DentalClinicWebApp.csproj
+# 6. Run the application
 dotnet run --project DentalClinicWebApp.csproj
 ```
 

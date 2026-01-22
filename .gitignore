@@ -40,13 +40,8 @@ fix-database-permissions.sql
 *.ldf
 *.ndf
 
-# Entity Framework
-**/Migrations/*
-
-# Keep migration files but ignore database files
-!**/Migrations/
-**/Migrations/*.cs
-!**/Migrations/ApplicationDbContextModelSnapshot.cs
+# Entity Framework - keep all migration files in source control
+# Migrations should be committed to ensure consistent database schema across environments
 
 # Local development settings
 appsettings.Development.json
