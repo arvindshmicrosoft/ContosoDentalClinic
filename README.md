@@ -2,6 +2,8 @@
 
 A comprehensive web application for managing a university dental clinic, built with ASP.NET Core 9.0 and Entity Framework Core.
 
+![Contoso Dental Clinic Overview](docs/ContosoDentalClinic-overview.gif)
+
 ---
 
 ## Features
