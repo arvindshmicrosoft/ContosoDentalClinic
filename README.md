@@ -43,7 +43,10 @@ A comprehensive web application for managing a university dental clinic, built w
 | Database | SQL Server / Azure SQL Database |
 | ORM | Entity Framework Core 9.0 |
 | Authentication | ASP.NET Core Identity |
-| Frontend | Bootstrap 5, Font Awesome |
+| Frontend Framework | Bootstrap 5.3 |
+| JavaScript | jQuery 3.7 |
+| Form Validation | jQuery Validation, jQuery Validation Unobtrusive |
+| Icons | Font Awesome |
 | AI Integration | Azure OpenAI (optional) |
 
 ---

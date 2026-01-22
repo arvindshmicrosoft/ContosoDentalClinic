@@ -108,7 +108,7 @@ node_modules/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+/dist
 
 # Storybook build outputs
 .out
